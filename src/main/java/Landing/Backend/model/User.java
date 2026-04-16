@@ -8,6 +8,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Column;
 import jakarta.persistence.PrePersist;
 
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -18,6 +21,8 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "users")
+@SQLDelete(sql = "UPDATE users SET active = false WHERE user_id = ?")
+@SQLRestriction("active = true")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
