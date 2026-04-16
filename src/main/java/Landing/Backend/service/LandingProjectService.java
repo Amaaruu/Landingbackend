@@ -1,14 +1,17 @@
 package Landing.Backend.service;
-
-import org.springframework.stereotype.Service;
-import Landing.Backend.model.Landing_Project;
-import Landing.Backend.repository.LandingProjectRepository;
-import lombok.RequiredArgsConstructor;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.stereotype.Service;
+
+import Landing.Backend.model.Landing_Project;
+import Landing.Backend.repository.LandingProjectRepository;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class LandingProjectService {
 
     private final LandingProjectRepository projectRepository;
