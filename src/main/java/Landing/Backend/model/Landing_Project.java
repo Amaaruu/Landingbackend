@@ -14,6 +14,9 @@ import jakarta.persistence.PreUpdate;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -23,6 +26,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "landing_project")
+@SQLDelete(sql = "UPDATE landing_project SET active = false WHERE project_id = ?")
+@SQLRestriction("active = true")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -74,6 +79,10 @@ public class Landing_Project {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean active = true;
 
     // Metodos del ciclo de vida de JPA
     @PrePersist

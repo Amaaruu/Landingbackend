@@ -7,6 +7,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Column;
 
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
+
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -16,6 +19,8 @@ import java.math.BigDecimal;
 
 @Entity
 @Table(name = "design_plan")
+@SQLDelete(sql = "UPDATE design_plan SET active = false WHERE plan_id = ?")
+@SQLRestriction("active = true")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
