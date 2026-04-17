@@ -1,14 +1,19 @@
 package Landing.Backend.service;
 
-import org.springframework.stereotype.Service;
-import Landing.Backend.model.Log;
-import Landing.Backend.repository.LogRepository;
-import lombok.RequiredArgsConstructor;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.stereotype.Service;
+
+import Landing.Backend.model.Log;
+import Landing.Backend.repository.LogRepository;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+
+
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class LogService {
     
     private final LogRepository logRepository;
