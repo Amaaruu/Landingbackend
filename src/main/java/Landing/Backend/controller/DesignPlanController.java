@@ -1,20 +1,24 @@
 package Landing.Backend.controller;
 
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpStatus;
+import java.util.List;
+import java.util.stream.Collectors;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import Landing.Backend.dto.DesignPlanRequestDTO;
+import Landing.Backend.dto.DesignPlanResponseDTO;
 import Landing.Backend.model.DesignPlan;
 import Landing.Backend.service.DesignPlanService;
 import lombok.RequiredArgsConstructor;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/plans")
@@ -23,39 +27,53 @@ public class DesignPlanController {
 
     private final DesignPlanService planService;
 
-    //Crear un nuevo plan
+    // POST: Crear un nuevo plan usando el DTO
     @PostMapping
-    public ResponseEntity<DesignPlan> createPlan(@RequestBody DesignPlan plan) {
+    public ResponseEntity<DesignPlanResponseDTO> createPlan(@RequestBody DesignPlanRequestDTO requestDTO) {
+        // Mapear de RequestDTO a Entidad
+        DesignPlan plan = new DesignPlan();
+        plan.setName(requestDTO.getName());
+        plan.setDescription(requestDTO.getDescription());
+        plan.setPrice(requestDTO.getPrice());
+
         DesignPlan createdPlan = planService.saveDesignPlan(plan);
-        return new ResponseEntity<>(createdPlan, HttpStatus.CREATED);
+        return new ResponseEntity<>(convertToResponseDTO(createdPlan), HttpStatus.CREATED);
     }
 
-    //Obtener el catálogo de planes activos
+    // GET ALL: Obtener el catálogo de planes activos
     @GetMapping
-    public ResponseEntity<List<DesignPlan>> getAllPlans() {
-        return ResponseEntity.ok(planService.getAllDesignPlans());
+    public ResponseEntity<List<DesignPlanResponseDTO>> getAllPlans() {
+        List<DesignPlanResponseDTO> plans = planService.getAllDesignPlans().stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(plans);
     }
 
-    //Obtener un plan específico
+    // GET BY ID: Obtener un plan específico
     @GetMapping("/{id}")
-    public ResponseEntity<DesignPlan> getPlanById(@PathVariable Integer id) {
+    public ResponseEntity<DesignPlanResponseDTO> getPlanById(@PathVariable Integer id) {
         return planService.getPlanById(id)
-                .map(ResponseEntity::ok)
+                .map(plan -> ResponseEntity.ok(convertToResponseDTO(plan)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    //Actualizar información de un plan
+    // PUT: Actualizar información de un plan
     @PutMapping("/{id}")
-    public ResponseEntity<DesignPlan> updatePlan(@PathVariable Integer id, @RequestBody DesignPlan plan) {
+    public ResponseEntity<DesignPlanResponseDTO> updatePlan(@PathVariable Integer id, @RequestBody DesignPlanRequestDTO requestDTO) {
         try {
-            DesignPlan updatedPlan = planService.updatePlan(id, plan);
-            return ResponseEntity.ok(updatedPlan);
+            DesignPlan planDetails = new DesignPlan();
+            planDetails.setName(requestDTO.getName());
+            planDetails.setDescription(requestDTO.getDescription());
+            planDetails.setPrice(requestDTO.getPrice());
+
+            DesignPlan updatedPlan = planService.updatePlan(id, planDetails);
+            return ResponseEntity.ok(convertToResponseDTO(updatedPlan));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
-    //Borrado Lógico transparente
+    // DELETE: Borrado Lógico transparente
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePlan(@PathVariable Integer id) {
         try {
@@ -64,5 +82,16 @@ public class DesignPlanController {
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    // --- MAPPER ---
+    private DesignPlanResponseDTO convertToResponseDTO(DesignPlan plan) {
+        DesignPlanResponseDTO dto = new DesignPlanResponseDTO();
+        dto.setPlanId(plan.getPlanId());
+        dto.setName(plan.getName());
+        dto.setDescription(plan.getDescription());
+        dto.setPrice(plan.getPrice());
+        // No exponemos el campo 'active' al Frontend
+        return dto;
     }
 }

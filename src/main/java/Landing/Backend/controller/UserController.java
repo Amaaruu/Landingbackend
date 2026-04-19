@@ -1,20 +1,24 @@
 package Landing.Backend.controller;
 
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpStatus;
+import java.util.List;
+import java.util.stream.Collectors;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import Landing.Backend.dto.UserRequestDTO;
+import Landing.Backend.dto.UserResponseDTO;
 import Landing.Backend.model.User;
 import Landing.Backend.service.UserService;
 import lombok.RequiredArgsConstructor;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -23,48 +27,73 @@ public class UserController {
 
     private final UserService userService;
 
-    // POST: Crear un usuario
+    // POST: Recibimos el DTO de entrada, lo convertimos a Entidad para guardar
     @PostMapping
-    public ResponseEntity<User> createUser(@RequestBody User user) {
+    public ResponseEntity<UserResponseDTO> createUser(@RequestBody UserRequestDTO requestDTO) {
+        User user = new User();
+        user.setName(requestDTO.getName());
+        user.setLastName(requestDTO.getLastname());
+        user.setEmail(requestDTO.getEmail());
+        user.setPassword(requestDTO.getPassword());
+        user.setRole(requestDTO.getRole());
+
         User createdUser = userService.saveUser(user);
-        return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
+        return new ResponseEntity<>(convertToResponseDTO(createdUser), HttpStatus.CREATED);
     }
 
-    // GET: Obtener todos los usuarios (Hibernate filtrará automáticamente los inactivos)
+    // GET ALL: Transformamos la lista de Entidades a una lista de DTOs seguros
     @GetMapping
-    public ResponseEntity<List<User>> getAllUsers() {
-        return ResponseEntity.ok(userService.findAllUsers());
+    public ResponseEntity<List<UserResponseDTO>> getAllUsers() {
+        List<UserResponseDTO> users = userService.findAllUsers().stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(users);
     }
 
-    // GET: Obtener usuario por ID
     @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable Integer id) {
+    public ResponseEntity<UserResponseDTO> getUserById(@PathVariable Integer id) {
         return userService.findById(id)
-                .map(ResponseEntity::ok)
+                .map(user -> ResponseEntity.ok(convertToResponseDTO(user)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // PUT: Actualizar información de un usuario
     @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable Integer id, @RequestBody User userDetails) {
+    public ResponseEntity<UserResponseDTO> updateUser(@PathVariable Integer id, @RequestBody UserRequestDTO requestDTO) {
         try {
+            // Reutilizamos la entidad solo como transporte de los datos actualizados
+            User userDetails = new User();
+            userDetails.setName(requestDTO.getName());
+            userDetails.setLastName(requestDTO.getLastname());
+            userDetails.setRole(requestDTO.getRole());
+            
             User updatedUser = userService.updateUser(id, userDetails);
-            return ResponseEntity.ok(updatedUser);
+            return ResponseEntity.ok(convertToResponseDTO(updatedUser));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
     }
 
-    // DELETE: Borrado Lógico transparente 
-    // (Al llamar a userService.deleteUser, Hibernate ejecutará el UPDATE active = false)
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Integer id) {
         try {
-            // Cambiamos 'deleteUserCascade' por el método estándar 'deleteUser'
             userService.deleteUser(id); 
-            return ResponseEntity.noContent().build(); // Retorna 204 No Content
+            return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    // --- MÉTODOS DE APOYO (MAPPERS) ---
+    // Esto mantiene los endpoints limpios y esparce la lógica de forma profesional.
+    private UserResponseDTO convertToResponseDTO(User user) {
+        UserResponseDTO dto = new UserResponseDTO();
+        dto.setUserId(user.getUserId());
+        dto.setUuid(user.getUuid());
+        dto.setName(user.getName());
+        dto.setLastName(user.getLastName());
+        dto.setEmail(user.getEmail());
+        dto.setRole(user.getRole());
+        dto.setRegisteredAt(user.getRegisteredAt());
+        return dto;
     }
 }
