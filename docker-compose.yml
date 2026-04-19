@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    container_name: landing-backend
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env # Docker inyectará automáticamente las variables de este archivo
+    restart: unless-stopped
