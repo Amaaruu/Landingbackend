@@ -23,15 +23,20 @@ import Landing.Backend.service.LandingProjectService;
 import Landing.Backend.service.TransactionService;
 import lombok.RequiredArgsConstructor;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/api/v1/projects")
 @RequiredArgsConstructor
+@Tag(name = "Proyectos", description = "Endpoints para gestion de proyectos de landing")
 public class LandingProjectController {
 
     private final LandingProjectService projectService;
     private final TransactionService transactionService; // Necesario para la relación 1:1
 
     @PostMapping
+    @Operation(summary = "Crear un nuevo proyecto de landing", description = "Crea un nuevo proyecto de landing con los datos proporcionados")
     public ResponseEntity<LandingProjectResponseDTO> createProject(@RequestBody LandingProjectRequestDTO requestDTO) {
         
         // Un proyecto solo puede existir si hay una transacción válida que lo respalde
@@ -51,6 +56,7 @@ public class LandingProjectController {
     }
 
     @GetMapping
+    @Operation(summary = "Obtener todos los proyectos de landing", description = "Devuelve una lista de todos los proyectos de landing registrados")
     public ResponseEntity<List<LandingProjectResponseDTO>> getAllProjects() {
         List<LandingProjectResponseDTO> projects = projectService.getAllProjects().stream()
                 .map(this::convertToResponseDTO)
@@ -59,6 +65,7 @@ public class LandingProjectController {
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Obtener proyecto de landing por ID", description = "Devuelve los detalles de un proyecto de landing específico según su ID")
     public ResponseEntity<LandingProjectResponseDTO> getProjectById(@PathVariable Integer id) {
         return projectService.getProjectById(id)
                 .map(p -> ResponseEntity.ok(convertToResponseDTO(p)))
@@ -66,6 +73,7 @@ public class LandingProjectController {
     }
 
     @PutMapping("/{id}/status")
+    @Operation(summary = "Actualizar estado de proyecto de landing", description = "Actualiza el estado de un proyecto de landing específico según su ID. Se puede incluir una URL firmada si el nuevo estado es 'COMPLETED'")
     public ResponseEntity<LandingProjectResponseDTO> updateStatus(
             @PathVariable Integer id, 
             @RequestParam String status, 
@@ -79,6 +87,7 @@ public class LandingProjectController {
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "Eliminar proyecto de landing", description = "Elimina un proyecto de landing específico según su ID")
     public ResponseEntity<Void> deleteProject(@PathVariable Integer id) {
         try {
             projectService.deleteProject(id);
