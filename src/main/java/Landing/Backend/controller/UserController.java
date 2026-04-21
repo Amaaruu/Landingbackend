@@ -20,15 +20,20 @@ import Landing.Backend.model.User;
 import Landing.Backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
+@Tag(name = "Usuarios", description = "Endpoints para gestion de usuarios")
 public class UserController {
 
     private final UserService userService;
 
     // POST: Recibimos el DTO de entrada, lo convertimos a Entidad para guardar
     @PostMapping
+    @Operation(summary = "Crear un nuevo usuario", description = "Crea un nuevo usuario con los datos proporcionados")
     public ResponseEntity<UserResponseDTO> createUser(@RequestBody UserRequestDTO requestDTO) {
         User user = new User();
         user.setName(requestDTO.getName());
@@ -43,6 +48,7 @@ public class UserController {
 
     // GET ALL: Transformamos la lista de Entidades a una lista de DTOs seguros
     @GetMapping
+    @Operation(summary = "Obtener todos los usuarios", description = "Devuelve una lista de todos los usuarios registrados")
     public ResponseEntity<List<UserResponseDTO>> getAllUsers() {
         List<UserResponseDTO> users = userService.findAllUsers().stream()
                 .map(this::convertToResponseDTO)
@@ -51,6 +57,7 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Obtener usuario por ID", description = "Devuelve los detalles de un usuario específico según su ID")
     public ResponseEntity<UserResponseDTO> getUserById(@PathVariable Integer id) {
         return userService.findById(id)
                 .map(user -> ResponseEntity.ok(convertToResponseDTO(user)))
@@ -58,6 +65,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "Actualizar usuario", description = "Actualiza los datos de un usuario específico según su ID")
     public ResponseEntity<UserResponseDTO> updateUser(@PathVariable Integer id, @RequestBody UserRequestDTO requestDTO) {
         try {
             // Reutilizamos la entidad solo como transporte de los datos actualizados
@@ -74,6 +82,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "Eliminar usuario", description = "Elimina un usuario específico según su ID")
     public ResponseEntity<Void> deleteUser(@PathVariable Integer id) {
         try {
             userService.deleteUser(id); 

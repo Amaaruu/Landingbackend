@@ -20,15 +20,20 @@ import Landing.Backend.model.DesignPlan;
 import Landing.Backend.service.DesignPlanService;
 import lombok.RequiredArgsConstructor;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/api/v1/plans")
 @RequiredArgsConstructor
+@Tag(name = "Planes de Diseño", description = "Endpoints para gestion de planes de diseño")
 public class DesignPlanController {
 
     private final DesignPlanService planService;
 
     // POST: Crear un nuevo plan usando el DTO
     @PostMapping
+    @Operation(summary = "Crear un nuevo plan de diseño", description = "Crea un nuevo plan de diseño con los datos proporcionados")
     public ResponseEntity<DesignPlanResponseDTO> createPlan(@RequestBody DesignPlanRequestDTO requestDTO) {
         // Mapear de RequestDTO a Entidad
         DesignPlan plan = new DesignPlan();
@@ -42,6 +47,7 @@ public class DesignPlanController {
 
     // GET ALL: Obtener el catálogo de planes activos
     @GetMapping
+    @Operation(summary = "Obtener todos los planes de diseño", description = "Devuelve una lista de todos los planes de diseño activos registrados")
     public ResponseEntity<List<DesignPlanResponseDTO>> getAllPlans() {
         List<DesignPlanResponseDTO> plans = planService.getAllDesignPlans().stream()
                 .map(this::convertToResponseDTO)
@@ -51,6 +57,7 @@ public class DesignPlanController {
 
     // GET BY ID: Obtener un plan específico
     @GetMapping("/{id}")
+    @Operation(summary = "Obtener plan de diseño por ID", description = "Devuelve los detalles de un plan de diseño específico según su ID")
     public ResponseEntity<DesignPlanResponseDTO> getPlanById(@PathVariable Integer id) {
         return planService.getPlanById(id)
                 .map(plan -> ResponseEntity.ok(convertToResponseDTO(plan)))
@@ -59,6 +66,7 @@ public class DesignPlanController {
 
     // PUT: Actualizar información de un plan
     @PutMapping("/{id}")
+    @Operation(summary = "Actualizar un plan de diseño", description = "Actualiza los datos de un plan de diseño específico según su ID")
     public ResponseEntity<DesignPlanResponseDTO> updatePlan(@PathVariable Integer id, @RequestBody DesignPlanRequestDTO requestDTO) {
         try {
             DesignPlan planDetails = new DesignPlan();
@@ -75,6 +83,7 @@ public class DesignPlanController {
 
     // DELETE: Borrado Lógico transparente
     @DeleteMapping("/{id}")
+    @Operation(summary = "Eliminar plan de diseño", description = "Elimina un plan de diseño específico según su ID (borrado lógico)")
     public ResponseEntity<Void> deletePlan(@PathVariable Integer id) {
         try {
             planService.deletePlan(id);

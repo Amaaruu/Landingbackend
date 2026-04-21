@@ -22,9 +22,13 @@ import Landing.Backend.service.LogService;
 import Landing.Backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/api/v1/logs")
 @RequiredArgsConstructor
+@Tag(name = "Logs", description = "Endpoints para gestion de logs")
 public class LogController {
 
     private final LogService logService;
@@ -34,6 +38,7 @@ public class LogController {
 
     // POST: Registrar un evento en el sistema
     @PostMapping
+    @Operation(summary = "Registrar un nuevo log", description = "Crea un nuevo registro de log con los datos proporcionados")
     public ResponseEntity<LogResponseDTO> createLog(@RequestBody LogRequestDTO requestDTO) {
         
         // 1. Buscamos al usuario (Obligatorio)
@@ -60,6 +65,7 @@ public class LogController {
 
     // GET ALL: Leer todo el historial de eventos
     @GetMapping
+    @Operation(summary = "Obtener todos los logs", description = "Devuelve una lista de todos los logs registrados")
     public ResponseEntity<List<LogResponseDTO>> getAllLogs() {
         List<LogResponseDTO> logs = logService.getAllLogs().stream()
                 .map(this::convertToResponseDTO)
@@ -69,6 +75,7 @@ public class LogController {
 
     // GET BY ID: Ver un evento específico
     @GetMapping("/{id}")
+    @Operation(summary = "Obtener log por ID", description = "Devuelve los detalles de un log específico según su ID")
     public ResponseEntity<LogResponseDTO> getLogById(@PathVariable Integer id) {
         return logService.getLogById(id)
                 .map(log -> ResponseEntity.ok(convertToResponseDTO(log)))

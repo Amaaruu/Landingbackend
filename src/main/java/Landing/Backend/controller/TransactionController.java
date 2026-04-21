@@ -24,9 +24,13 @@ import Landing.Backend.service.TransactionService;
 import Landing.Backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
 @RequestMapping("/api/v1/transactions")
 @RequiredArgsConstructor
+@Tag(name = "Transacciones", description = "Endpoints para gestion de transacciones")
 public class TransactionController {
 
     private final TransactionService transactionService;
@@ -35,6 +39,7 @@ public class TransactionController {
     private final DesignPlanService designPlanService;
 
     @PostMapping
+    @Operation(summary = "Crear una nueva transacción", description = "Crea una nueva transacción con los datos proporcionados")
     public ResponseEntity<TransactionResponseDTO> createTransaction(@RequestBody TransactionRequestDTO requestDTO) {
         // 1. Validar que el Usuario y el Plan de Diseño realmente existan en la BD
         User user = userService.findById(requestDTO.getUserId())
@@ -55,6 +60,7 @@ public class TransactionController {
     }
 
     @GetMapping
+    @Operation(summary = "Obtener todas las transacciones", description = "Devuelve una lista de todas las transacciones registradas")
     public ResponseEntity<List<TransactionResponseDTO>> getAllTransactions() {
         List<TransactionResponseDTO> transactions = transactionService.getAllTransactions().stream()
                 .map(this::convertToResponseDTO)
@@ -63,6 +69,7 @@ public class TransactionController {
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Obtener transacción por ID", description = "Devuelve los detalles de una transacción específica según su ID")
     public ResponseEntity<TransactionResponseDTO> getTransactionById(@PathVariable Integer id) {
         return transactionService.getTransactionById(id)
                 .map(t -> ResponseEntity.ok(convertToResponseDTO(t)))
@@ -70,6 +77,7 @@ public class TransactionController {
     }
 
     @PutMapping("/{id}/status")
+    @Operation(summary = "Actualizar estado de transacción", description = "Actualiza el estado de una transacción específica según su ID")
     public ResponseEntity<TransactionResponseDTO> updateTransactionStatus(
             @PathVariable Integer id, 
             @RequestParam String status) {
