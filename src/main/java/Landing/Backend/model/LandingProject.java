@@ -1,6 +1,7 @@
 package Landing.Backend.model;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.SQLDelete;
@@ -54,7 +55,7 @@ public class LandingProject {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "color_palette", columnDefinition = "jsonb")
-    private String colorPalette;
+    private Map<String, Object> colorPalette;
 
     @Column(name = "signed_url")
     private String signedUrl; // URL temporal para descargar el proyecto
@@ -68,7 +69,7 @@ public class LandingProject {
     // Metadata de la IA guardada como JSONB
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "ai_metadata", columnDefinition = "jsonb")
-    private String aiMetadata;
+    private Map<String, Object> aiMetadata;
 
     @Column(nullable = false)
     private String status; // Procesando, Listo para descargar, expirado, etc.
