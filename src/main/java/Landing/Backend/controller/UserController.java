@@ -22,19 +22,19 @@ import lombok.RequiredArgsConstructor;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
-@Tag(name = "Usuarios", description = "Endpoints para gestion de usuarios")
+@Tag(name = "Usuarios", description = "Endpoints para la gestión de usuarios y perfiles")
 public class UserController {
 
     private final UserService userService;
 
-    // POST: Recibimos el DTO de entrada, lo convertimos a Entidad para guardar
     @PostMapping
-    @Operation(summary = "Crear un nuevo usuario", description = "Crea un nuevo usuario con los datos proporcionados")
-    public ResponseEntity<UserResponseDTO> createUser(@RequestBody UserRequestDTO requestDTO) {
+    @Operation(summary = "Crear un nuevo usuario", description = "Registra un usuario y genera su UUID único")
+    public ResponseEntity<UserResponseDTO> createUser(@Valid @RequestBody UserRequestDTO requestDTO) {
         User user = new User();
         user.setName(requestDTO.getName());
         user.setLastName(requestDTO.getLastname());
@@ -46,9 +46,8 @@ public class UserController {
         return new ResponseEntity<>(convertToResponseDTO(createdUser), HttpStatus.CREATED);
     }
 
-    // GET ALL: Transformamos la lista de Entidades a una lista de DTOs seguros
     @GetMapping
-    @Operation(summary = "Obtener todos los usuarios", description = "Devuelve una lista de todos los usuarios registrados")
+    @Operation(summary = "Listar usuarios", description = "Obtiene todos los usuarios con estado activo")
     public ResponseEntity<List<UserResponseDTO>> getAllUsers() {
         List<UserResponseDTO> users = userService.findAllUsers().stream()
                 .map(this::convertToResponseDTO)
@@ -57,7 +56,7 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Obtener usuario por ID", description = "Devuelve los detalles de un usuario específico según su ID")
+    @Operation(summary = "Buscar usuario", description = "Obtiene los detalles de un usuario por su ID numérico")
     public ResponseEntity<UserResponseDTO> getUserById(@PathVariable Integer id) {
         return userService.findById(id)
                 .map(user -> ResponseEntity.ok(convertToResponseDTO(user)))
@@ -65,10 +64,9 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    @Operation(summary = "Actualizar usuario", description = "Actualiza los datos de un usuario específico según su ID")
-    public ResponseEntity<UserResponseDTO> updateUser(@PathVariable Integer id, @RequestBody UserRequestDTO requestDTO) {
+    @Operation(summary = "Actualizar perfil", description = "Modifica los datos básicos de un usuario existente")
+    public ResponseEntity<UserResponseDTO> updateUser(@PathVariable Integer id, @Valid @RequestBody UserRequestDTO requestDTO) {
         try {
-            // Reutilizamos la entidad solo como transporte de los datos actualizados
             User userDetails = new User();
             userDetails.setName(requestDTO.getName());
             userDetails.setLastName(requestDTO.getLastname());
@@ -82,7 +80,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Eliminar usuario", description = "Elimina un usuario específico según su ID")
+    @Operation(summary = "Borrado lógico de usuario", description = "Cambia el estado del usuario a inactivo")
     public ResponseEntity<Void> deleteUser(@PathVariable Integer id) {
         try {
             userService.deleteUser(id); 
@@ -92,8 +90,6 @@ public class UserController {
         }
     }
 
-    // --- MÉTODOS DE APOYO (MAPPERS) ---
-    // Esto mantiene los endpoints limpios y esparce la lógica de forma profesional.
     private UserResponseDTO convertToResponseDTO(User user) {
         UserResponseDTO dto = new UserResponseDTO();
         dto.setUserId(user.getUserId());
