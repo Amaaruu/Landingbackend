@@ -22,20 +22,19 @@ import lombok.RequiredArgsConstructor;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/plans")
 @RequiredArgsConstructor
-@Tag(name = "Planes de Diseño", description = "Endpoints para gestion de planes de diseño")
+@Tag(name = "Planes de Diseño", description = "Gestión del catálogo de planes y precios")
 public class DesignPlanController {
 
     private final DesignPlanService planService;
 
-    // POST: Crear un nuevo plan usando el DTO
     @PostMapping
-    @Operation(summary = "Crear un nuevo plan de diseño", description = "Crea un nuevo plan de diseño con los datos proporcionados")
-    public ResponseEntity<DesignPlanResponseDTO> createPlan(@RequestBody DesignPlanRequestDTO requestDTO) {
-        // Mapear de RequestDTO a Entidad
+    @Operation(summary = "Crear nuevo plan", description = "Añade un plan de diseño al catálogo comercial")
+    public ResponseEntity<DesignPlanResponseDTO> createPlan(@Valid @RequestBody DesignPlanRequestDTO requestDTO) {
         DesignPlan plan = new DesignPlan();
         plan.setName(requestDTO.getName());
         plan.setDescription(requestDTO.getDescription());
@@ -45,9 +44,8 @@ public class DesignPlanController {
         return new ResponseEntity<>(convertToResponseDTO(createdPlan), HttpStatus.CREATED);
     }
 
-    // GET ALL: Obtener el catálogo de planes activos
     @GetMapping
-    @Operation(summary = "Obtener todos los planes de diseño", description = "Devuelve una lista de todos los planes de diseño activos registrados")
+    @Operation(summary = "Listar planes activos", description = "Recupera todos los planes disponibles para la venta")
     public ResponseEntity<List<DesignPlanResponseDTO>> getAllPlans() {
         List<DesignPlanResponseDTO> plans = planService.getAllDesignPlans().stream()
                 .map(this::convertToResponseDTO)
@@ -55,19 +53,17 @@ public class DesignPlanController {
         return ResponseEntity.ok(plans);
     }
 
-    // GET BY ID: Obtener un plan específico
     @GetMapping("/{id}")
-    @Operation(summary = "Obtener plan de diseño por ID", description = "Devuelve los detalles de un plan de diseño específico según su ID")
+    @Operation(summary = "Consultar plan", description = "Obtiene la información detallada de un plan específico")
     public ResponseEntity<DesignPlanResponseDTO> getPlanById(@PathVariable Integer id) {
         return planService.getPlanById(id)
                 .map(plan -> ResponseEntity.ok(convertToResponseDTO(plan)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // PUT: Actualizar información de un plan
     @PutMapping("/{id}")
-    @Operation(summary = "Actualizar un plan de diseño", description = "Actualiza los datos de un plan de diseño específico según su ID")
-    public ResponseEntity<DesignPlanResponseDTO> updatePlan(@PathVariable Integer id, @RequestBody DesignPlanRequestDTO requestDTO) {
+    @Operation(summary = "Actualizar plan", description = "Modifica precios o descripciones de un plan existente")
+    public ResponseEntity<DesignPlanResponseDTO> updatePlan(@PathVariable Integer id, @Valid @RequestBody DesignPlanRequestDTO requestDTO) {
         try {
             DesignPlan planDetails = new DesignPlan();
             planDetails.setName(requestDTO.getName());
@@ -81,9 +77,8 @@ public class DesignPlanController {
         }
     }
 
-    // DELETE: Borrado Lógico transparente
     @DeleteMapping("/{id}")
-    @Operation(summary = "Eliminar plan de diseño", description = "Elimina un plan de diseño específico según su ID (borrado lógico)")
+    @Operation(summary = "Desactivar plan", description = "Realiza un borrado lógico del plan del catálogo")
     public ResponseEntity<Void> deletePlan(@PathVariable Integer id) {
         try {
             planService.deletePlan(id);
@@ -93,14 +88,12 @@ public class DesignPlanController {
         }
     }
 
-    // --- MAPPER ---
     private DesignPlanResponseDTO convertToResponseDTO(DesignPlan plan) {
         DesignPlanResponseDTO dto = new DesignPlanResponseDTO();
         dto.setPlanId(plan.getPlanId());
         dto.setName(plan.getName());
         dto.setDescription(plan.getDescription());
         dto.setPrice(plan.getPrice());
-        // No exponemos el campo 'active' al Frontend
         return dto;
     }
 }

@@ -25,21 +25,21 @@ import lombok.RequiredArgsConstructor;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/projects")
 @RequiredArgsConstructor
-@Tag(name = "Proyectos", description = "Endpoints para gestion de proyectos de landing")
+@Tag(name = "Proyectos", description = "Gestión de las Landing Pages generadas por IA")
 public class LandingProjectController {
 
     private final LandingProjectService projectService;
-    private final TransactionService transactionService; // Necesario para la relación 1:1
+    private final TransactionService transactionService;
 
     @PostMapping
-    @Operation(summary = "Crear un nuevo proyecto de landing", description = "Crea un nuevo proyecto de landing con los datos proporcionados")
-    public ResponseEntity<LandingProjectResponseDTO> createProject(@RequestBody LandingProjectRequestDTO requestDTO) {
+    @Operation(summary = "Crear proyecto", description = "Inicia la creación de una landing page vinculada a un pago exitoso")
+    public ResponseEntity<LandingProjectResponseDTO> createProject(@Valid @RequestBody LandingProjectRequestDTO requestDTO) {
         
-        // Un proyecto solo puede existir si hay una transacción válida que lo respalde
         Transaction transaction = transactionService.getTransactionById(requestDTO.getTransactionId())
                 .orElseThrow(() -> new RuntimeException("Transacción no encontrada"));
 
@@ -49,14 +49,13 @@ public class LandingProjectController {
         project.setBusinessSector(requestDTO.getBusinessSector());
         project.setCommunicationTone(requestDTO.getCommunicationTone());
         project.setColorPalette(requestDTO.getColorPalette());
-        // Status y demás campos se llenan automáticamente en el Service y Entidad
 
         LandingProject createdProject = projectService.createProject(project);
         return new ResponseEntity<>(convertToResponseDTO(createdProject), HttpStatus.CREATED);
     }
 
     @GetMapping
-    @Operation(summary = "Obtener todos los proyectos de landing", description = "Devuelve una lista de todos los proyectos de landing registrados")
+    @Operation(summary = "Listar proyectos", description = "Obtiene el historial de proyectos generados")
     public ResponseEntity<List<LandingProjectResponseDTO>> getAllProjects() {
         List<LandingProjectResponseDTO> projects = projectService.getAllProjects().stream()
                 .map(this::convertToResponseDTO)
@@ -65,7 +64,7 @@ public class LandingProjectController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Obtener proyecto de landing por ID", description = "Devuelve los detalles de un proyecto de landing específico según su ID")
+    @Operation(summary = "Ver detalles de proyecto", description = "Recupera la metadata y estado de una landing específica")
     public ResponseEntity<LandingProjectResponseDTO> getProjectById(@PathVariable Integer id) {
         return projectService.getProjectById(id)
                 .map(p -> ResponseEntity.ok(convertToResponseDTO(p)))
@@ -73,7 +72,7 @@ public class LandingProjectController {
     }
 
     @PutMapping("/{id}/status")
-    @Operation(summary = "Actualizar estado de proyecto de landing", description = "Actualiza el estado de un proyecto de landing específico según su ID. Se puede incluir una URL firmada si el nuevo estado es 'COMPLETED'")
+    @Operation(summary = "Actualizar estado", description = "Cambia el estado del proyecto (ej. de 'Processing' a 'Ready')")
     public ResponseEntity<LandingProjectResponseDTO> updateStatus(
             @PathVariable Integer id, 
             @RequestParam String status, 
@@ -87,7 +86,7 @@ public class LandingProjectController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Eliminar proyecto de landing", description = "Elimina un proyecto de landing específico según su ID")
+    @Operation(summary = "Eliminar proyecto", description = "Realiza el borrado lógico de un proyecto de landing")
     public ResponseEntity<Void> deleteProject(@PathVariable Integer id) {
         try {
             projectService.deleteProject(id);
@@ -97,7 +96,6 @@ public class LandingProjectController {
         }
     }
 
-    // --- MAPPER ---
     private LandingProjectResponseDTO convertToResponseDTO(LandingProject project) {
         LandingProjectResponseDTO dto = new LandingProjectResponseDTO();
         dto.setProjectId(project.getProjectId());

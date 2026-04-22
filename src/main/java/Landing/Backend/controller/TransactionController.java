@@ -26,29 +26,28 @@ import lombok.RequiredArgsConstructor;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/transactions")
 @RequiredArgsConstructor
-@Tag(name = "Transacciones", description = "Endpoints para gestion de transacciones")
+@Tag(name = "Transacciones", description = "Endpoints para la gestión de pagos e historial financiero")
 public class TransactionController {
 
     private final TransactionService transactionService;
-    // Inyectamos estos servicios para validar que el usuario y el plan existan
     private final UserService userService;
     private final DesignPlanService designPlanService;
 
     @PostMapping
-    @Operation(summary = "Crear una nueva transacción", description = "Crea una nueva transacción con los datos proporcionados")
-    public ResponseEntity<TransactionResponseDTO> createTransaction(@RequestBody TransactionRequestDTO requestDTO) {
-        // 1. Validar que el Usuario y el Plan de Diseño realmente existan en la BD
+    @Operation(summary = "Crear transacción", description = "Registra un nuevo intento de pago vinculando un usuario activo con un plan de diseño")
+    public ResponseEntity<TransactionResponseDTO> createTransaction(@Valid @RequestBody TransactionRequestDTO requestDTO) {
+        
         User user = userService.findById(requestDTO.getUserId())
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
                 
         DesignPlan plan = designPlanService.getPlanById(requestDTO.getPlanId())
                 .orElseThrow(() -> new RuntimeException("Plan no encontrado"));
 
-        // 2. Construir la Entidad con sus relaciones reales
         Transaction transaction = new Transaction();
         transaction.setUser(user);
         transaction.setPlan(plan);
@@ -60,7 +59,7 @@ public class TransactionController {
     }
 
     @GetMapping
-    @Operation(summary = "Obtener todas las transacciones", description = "Devuelve una lista de todas las transacciones registradas")
+    @Operation(summary = "Listar transacciones", description = "Obtiene el historial completo de transacciones realizadas en la plataforma")
     public ResponseEntity<List<TransactionResponseDTO>> getAllTransactions() {
         List<TransactionResponseDTO> transactions = transactionService.getAllTransactions().stream()
                 .map(this::convertToResponseDTO)
@@ -69,7 +68,7 @@ public class TransactionController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Obtener transacción por ID", description = "Devuelve los detalles de una transacción específica según su ID")
+    @Operation(summary = "Consultar transacción", description = "Obtiene los detalles y el estado actual de una transacción por su ID")
     public ResponseEntity<TransactionResponseDTO> getTransactionById(@PathVariable Integer id) {
         return transactionService.getTransactionById(id)
                 .map(t -> ResponseEntity.ok(convertToResponseDTO(t)))
@@ -77,7 +76,7 @@ public class TransactionController {
     }
 
     @PutMapping("/{id}/status")
-    @Operation(summary = "Actualizar estado de transacción", description = "Actualiza el estado de una transacción específica según su ID")
+    @Operation(summary = "Actualizar estado de pago", description = "Modifica el estado de una transacción (ej. de PENDIENTE a COMPLETADO o RECHAZADO)")
     public ResponseEntity<TransactionResponseDTO> updateTransactionStatus(
             @PathVariable Integer id, 
             @RequestParam String status) {
@@ -89,12 +88,10 @@ public class TransactionController {
         }
     }
 
-    // --- MAPPER ---
     private TransactionResponseDTO convertToResponseDTO(Transaction transaction) {
         TransactionResponseDTO dto = new TransactionResponseDTO();
         dto.setTransactionId(transaction.getTransactionId());
         dto.setUserId(transaction.getUser().getUserId());
-        // Extraemos nombres directamente para facilitarle la vida al Frontend
         dto.setUserName(transaction.getUser().getName() + " " + transaction.getUser().getLastName());
         dto.setPlanId(transaction.getPlan().getPlanId());
         dto.setPlanName(transaction.getPlan().getName());
