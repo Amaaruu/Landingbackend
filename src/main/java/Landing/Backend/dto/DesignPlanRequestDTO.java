@@ -18,7 +18,7 @@ public class DesignPlanRequestDTO {
     @NotBlank(message = "La descripcion del plan no puede estar vacia")
     private String description;
     
-    @NotBlank(message = "El precio del plan es obligatorio")
-    @DecimalMin(value = "0.0", inclusive = true, message = "El precio del plan debe ser un valor positivo")
+    @NotNull(message = "El precio del plan es obligatorio")
+    @DecimalMin(value = "0.0", inclusive = false, message = "El precio del plan debe ser un valor positivo")
     private BigDecimal price;
 }

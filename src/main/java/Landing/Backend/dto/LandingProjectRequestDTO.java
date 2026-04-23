@@ -22,7 +22,7 @@ public class LandingProjectRequestDTO {
     @NotBlank(message = "La descripcion del proyecto no puede estar vacia")
     private String communicationTone;
 
-    @NotBlank(message = "La paleta de colores es obligatorio")
+    @NotNull(message = "La paleta de colores es obligatorio")
     @NotEmpty(message = "La paleta de colores no puede estar vacia")
     private Map<String, Object> colorPalette; // JSON String
 }

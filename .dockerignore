@@ -2,4 +2,4 @@ target/
 .git/
 .vscode/
 .idea/
-.env
+.env/
