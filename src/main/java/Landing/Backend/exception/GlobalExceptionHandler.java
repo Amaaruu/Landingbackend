@@ -63,17 +63,4 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
-    // 4. Errores críticos del servidor (Devuelve 500)
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponseDTO> handleGlobalExceptions(Exception ex, HttpServletRequest request) {
-        ErrorResponseDTO response = ErrorResponseDTO.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .error("Internal Server Error")
-                .message("Ocurrió un error inesperado en el servidor")
-                .path(request.getRequestURI())
-                .build();
-        ex.printStackTrace();
-        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
 }
