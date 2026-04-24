@@ -2,33 +2,23 @@ package Landing.Backend.model;
 
 import java.time.LocalDateTime;
 import java.util.Map;
-
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.type.SqlTypes;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "landing_project")
 @SQLDelete(sql = "UPDATE landing_project SET active = false WHERE project_id = ?")
 @SQLRestriction("active = true")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -39,7 +29,6 @@ public class LandingProject {
     @Column(name = "project_id")
     private Integer projectId;
 
-    // Relacion 1 a 1: una transaccion libera exaactamente un proyecto.
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "transaction_id", nullable = false, unique = true)
     private Transaction transaction;
@@ -53,26 +42,25 @@ public class LandingProject {
     @Column(name = "communication_tone", nullable = false)
     private String communicationTone;
 
-    @JdbcTypeCode(SqlTypes.JSON)
+    @JdbcTypeCode(SqlTypes.JSON) // Soporte para JSONB en Postgres
     @Column(name = "color_palette", columnDefinition = "jsonb")
     private Map<String, Object> colorPalette;
 
     @Column(name = "signed_url")
-    private String signedUrl; // URL temporal para descargar el proyecto
+    private String signedUrl; 
 
     @Column(name = "url_role")
-    private String urlRole; // rol asociado a la URL
+    private String urlRole;
 
     @Column(name = "url_expiration_at")
-    private LocalDateTime urlExpiresAt; // fecha de expiracion de la URL
+    private LocalDateTime urlExpiresAt;
 
-    // Metadata de la IA guardada como JSONB
-    @JdbcTypeCode(SqlTypes.JSON)
+    @JdbcTypeCode(SqlTypes.JSON) // Almacena el resultado de la IA
     @Column(name = "ai_metadata", columnDefinition = "jsonb")
     private Map<String, Object> aiMetadata;
 
     @Column(nullable = false)
-    private String status; // Procesando, Listo para descargar, expirado, etc.
+    private String status;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -84,7 +72,6 @@ public class LandingProject {
     @Builder.Default
     private Boolean active = true;
 
-    // Metodos del ciclo de vida de JPA
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -95,5 +82,4 @@ public class LandingProject {
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
-    
 }
