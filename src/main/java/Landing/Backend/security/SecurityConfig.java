@@ -22,18 +22,17 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(Customizer.withDefaults()) // Activa tu archivo CorsConfig para que React pueda conectarse
-            .csrf(csrf -> csrf.disable()) // Desactivamos CSRF ya que usaremos tokens (JWT)
+            .cors(Customizer.withDefaults())
+            .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                // RUTAS PÚBLICAS (No requieren token)
-                .requestMatchers("/api/v1/auth/**").permitAll() // Login y Registro
-                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll() // Swagger
-                // RUTAS PRIVADAS (Todo lo demás requiere token)
-                .anyRequest().authenticated() 
+                .requestMatchers("/api/v1/auth/**").permitAll()
+                // Permitimos todas las variantes de rutas de Swagger y OpenAPI
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html", "/v3/api-docs").permitAll()
+                .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authenticationProvider(authenticationProvider)
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class); // Filtro que lee el token antes de dar acceso
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
