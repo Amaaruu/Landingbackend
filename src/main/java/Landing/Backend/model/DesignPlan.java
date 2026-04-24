@@ -1,27 +1,21 @@
 package Landing.Backend.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-import jakarta.persistence.Id;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Column;
-
+import jakarta.persistence.*;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
-
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-
 import java.math.BigDecimal;
 
 @Entity
 @Table(name = "design_plan")
 @SQLDelete(sql = "UPDATE design_plan SET active = false WHERE plan_id = ?")
 @SQLRestriction("active = true")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

@@ -35,25 +35,35 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
     }
 
-    // 2. Atrapa los errores que lanzamos manualmente (ej: "Proyecto no encontrado")
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<ErrorResponseDTO> handleRuntimeExceptions(RuntimeException ex, HttpServletRequest request) {
-        // Detectamos si el mensaje habla de algo "no encontrado" para devolver 404, de lo contrario 400
-        HttpStatus status = ex.getMessage().toLowerCase().contains("no encontrado") ? 
-                            HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
-
+    // 2. NUEVO: Atrapa nuestra excepción personalizada (Devuelve 404 Exacto)
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<ErrorResponseDTO> handleResourceNotFoundException(ResourceNotFoundException ex, HttpServletRequest request) {
         ErrorResponseDTO response = ErrorResponseDTO.builder()
                 .timestamp(LocalDateTime.now())
-                .status(status.value())
-                .error(status.getReasonPhrase())
-                .message(ex.getMessage()) // Muestra el mensaje exacto de nuestro throw
+                .status(HttpStatus.NOT_FOUND.value())
+                .error(HttpStatus.NOT_FOUND.getReasonPhrase())
+                .message(ex.getMessage())
                 .path(request.getRequestURI())
                 .build();
 
-        return new ResponseEntity<>(response, status);
+        return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
     }
 
-    // 3. Atrapa cualquier otro error crítico del servidor (Fallas de base de datos, código roto, etc)
+    // 3. Atrapa errores lógicos de negocio generales (Devuelve 400)
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ErrorResponseDTO> handleRuntimeExceptions(RuntimeException ex, HttpServletRequest request) {
+        ErrorResponseDTO response = ErrorResponseDTO.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message(ex.getMessage()) 
+                .path(request.getRequestURI())
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+    }
+
+    // 4. Errores críticos del servidor (Devuelve 500)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDTO> handleGlobalExceptions(Exception ex, HttpServletRequest request) {
         ErrorResponseDTO response = ErrorResponseDTO.builder()
@@ -63,10 +73,7 @@ public class GlobalExceptionHandler {
                 .message("Ocurrió un error inesperado en el servidor")
                 .path(request.getRequestURI())
                 .build();
-
-        // En consola sí imprimimos el error real para nosotros los desarrolladores
         ex.printStackTrace();
-
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
