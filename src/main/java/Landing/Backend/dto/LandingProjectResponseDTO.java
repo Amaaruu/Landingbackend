@@ -3,9 +3,15 @@ package Landing.Backend.dto;
 import java.time.LocalDateTime;
 import java.util.Map;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class LandingProjectResponseDTO {
     private Integer projectId;
     private Integer transactionId; // Solo devolvemos el ID para evitar anidamiento excesivo
@@ -20,4 +26,5 @@ public class LandingProjectResponseDTO {
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String generatedHtml;
 }

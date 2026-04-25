@@ -45,10 +45,9 @@ public class LogController {
 
         LandingProject project = null;
         if (requestDTO.getProjectId() != null) {
-            project = landingProjectService.getProjectById(requestDTO.getProjectId())
-                    .orElseThrow(() -> new RuntimeException("Proyecto no encontrado para el log"));
+            // Usamos el nuevo método interno que nos da la Entidad directa
+            project = landingProjectService.getProjectEntityById(requestDTO.getProjectId());
         }
-
         Log log = new Log();
         log.setUser(user);
         log.setProject(project);
