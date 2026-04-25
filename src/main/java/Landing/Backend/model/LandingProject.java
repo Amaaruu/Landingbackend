@@ -49,6 +49,9 @@ public class LandingProject {
     @Column(name = "signed_url")
     private String signedUrl; 
 
+    @Column(name = "generated_html", columnDefinition = "TEXT")
+    private String generatedHtml;
+
     @Column(name = "url_role")
     private String urlRole;
 
