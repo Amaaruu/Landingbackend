@@ -42,15 +42,13 @@ public class LandingProject {
     @Column(name = "communication_tone", nullable = false)
     private String communicationTone;
 
-    @JdbcTypeCode(SqlTypes.JSON) // Soporte para JSONB en Postgres
-    @Column(name = "color_palette", columnDefinition = "jsonb")
-    private Map<String, Object> colorPalette;
+    // Renombrado para soportar opciones premium (animaciones, estilo, etc.)
+    @JdbcTypeCode(SqlTypes.JSON) 
+    @Column(name = "design_preferences", columnDefinition = "jsonb")
+    private Map<String, Object> designPreferences;
 
     @Column(name = "signed_url")
     private String signedUrl; 
-
-    @Column(name = "generated_html", columnDefinition = "TEXT")
-    private String generatedHtml;
 
     @Column(name = "url_role")
     private String urlRole;
@@ -58,7 +56,7 @@ public class LandingProject {
     @Column(name = "url_expiration_at")
     private LocalDateTime urlExpiresAt;
 
-    @JdbcTypeCode(SqlTypes.JSON) // Almacena el resultado de la IA
+    @JdbcTypeCode(SqlTypes.JSON) 
     @Column(name = "ai_metadata", columnDefinition = "jsonb")
     private Map<String, Object> aiMetadata;
 
@@ -84,5 +82,5 @@ public class LandingProject {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
-    }
+    }   
 }
