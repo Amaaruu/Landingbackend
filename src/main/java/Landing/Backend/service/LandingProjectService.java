@@ -10,20 +10,19 @@ import Landing.Backend.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class LandingProjectService {
 
     private final LandingProjectRepository projectRepository;
     private final TransactionRepository transactionRepository;
     private final AiService aiService;
 
-    // --- 1. CREAR ---
-    public LandingProjectResponseDTO createProject(LandingProjectRequestDTO request) {
+    // 1. Guardado Inicial (Conexión a BD Ultrarrápida)
+    @Transactional
+    public LandingProject saveInitialProject(LandingProjectRequestDTO request) {
         Transaction transaction = transactionRepository.findById(request.getTransactionId())
                 .orElseThrow(() -> new RuntimeException("Transacción no encontrada"));
 
@@ -32,51 +31,72 @@ public class LandingProjectService {
                 .projectName(request.getProjectName())
                 .businessSector(request.getBusinessSector())
                 .communicationTone(request.getCommunicationTone())
-                .colorPalette(request.getColorPalette())
+                .designPreferences(request.getDesignPreferences())
                 .status("Processing")
                 .build();
 
-        project = projectRepository.save(project);
-
-        try {
-            AiResponseDTO aiResponse = aiService.requestLandingGeneration(project, "BASIC");
-            System.out.println("✅ Código recibido de Python. Motor usado: " + aiResponse.getAi_engine());
-            project.setGeneratedHtml(aiResponse.getGeneratedHtml());
-            project.setStatus("Ready");
-        } catch (Exception e) {
-            System.err.println("❌ Error con la IA: " + e.getMessage());
-            project.setStatus("Failed");
-        }
-
-        projectRepository.save(project);
-        return mapToResponse(project);
+        return projectRepository.save(project);
     }
 
-    // --- 2. LEER TODOS ---
+    // 2. Guardado Final Post-IA (Conexión a BD Ultrarrápida)
+    @Transactional
+    public void updateProjectWithAiData(Integer projectId, AiResponseDTO aiResponse) {
+        LandingProject project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
+        
+        project.setAiMetadata(aiResponse.getAiMetadata());
+        project.setStatus("Ready");
+        projectRepository.save(project);
+    }
+
+    @Transactional
+    public void markProjectAsFailed(Integer projectId) {
+        projectRepository.findById(projectId).ifPresent(project -> {
+            project.setStatus("Failed");
+            projectRepository.save(project);
+        });
+    }
+
+    // EL FLUJO DE CREACIÓN MAESTRO (Libre de bloqueos)
+    public LandingProjectResponseDTO createProject(LandingProjectRequestDTO request) {
+        
+        // Paso A: Guardamos en PostgreSQL y soltamos la conexión
+        LandingProject project = saveInitialProject(request);
+        
+        // Extraemos el plan pagado (Ej: "BASIC", "INTERMEDIATE", "PREMIUM")
+        String userPlan = project.getTransaction().getPlan().getName().toUpperCase(); 
+
+        try {
+            // Paso B: Llamada HTTP a Python (Esto puede tardar, pero no afecta a PostgreSQL)
+            AiResponseDTO aiResponse = aiService.requestLandingGeneration(project, userPlan);
+            System.out.println("✅ JSON Estructural recibido. Motor usado: " + aiResponse.getAi_engine());
+            
+            // Paso C: Volvemos a conectarnos a BD rápido para guardar el resultado
+            updateProjectWithAiData(project.getProjectId(), aiResponse);
+            
+            return getProjectById(project.getProjectId());
+
+        } catch (Exception e) {
+            System.err.println("❌ Error con la IA: " + e.getMessage());
+            markProjectAsFailed(project.getProjectId());
+            return getProjectById(project.getProjectId());
+        }
+    }
+
+    // --- MÉTODOS DE LECTURA Y ACTUALIZACIÓN ---
     public List<LandingProjectResponseDTO> getAllProjects() {
         return projectRepository.findAll().stream()
                 .map(this::mapToResponse)
                 .toList();
     }
 
-    // --- 3. LEER UNO ---
     public LandingProjectResponseDTO getProjectById(Integer id) {
         LandingProject project = projectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
         return mapToResponse(project);
     }
 
-    // --- 4. LEER HTML RENDERIZADO ---
-    public String getProjectHtml(Integer id) {
-        LandingProject project = projectRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
-        if (project.getGeneratedHtml() == null) {
-            return "<html><body><h1>El proyecto aún se está procesando o falló.</h1></body></html>";
-        }
-        return project.getGeneratedHtml();
-    }
-
-    // --- 5. ACTUALIZAR ESTADO ---
+    @Transactional
     public LandingProjectResponseDTO updateProjectStatus(Integer id, String status) {
         LandingProject project = projectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
@@ -85,27 +105,30 @@ public class LandingProjectService {
         return mapToResponse(project);
     }
 
-    // --- 6. ELIMINAR ---
+    @Transactional
     public void deleteProject(Integer id) {
         LandingProject project = projectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
         projectRepository.delete(project);
     }
 
-    public LandingProject getProjectEntityById(Integer id) {
-        return projectRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
-    }
-
-    // --- MAPPER INTERNO ---
+    // MAPPER INTERNO
     private LandingProjectResponseDTO mapToResponse(LandingProject project) {
         return LandingProjectResponseDTO.builder()
                 .projectId(project.getProjectId())
                 .projectName(project.getProjectName())
+                .businessSector(project.getBusinessSector())
+                .communicationTone(project.getCommunicationTone())
+                .designPreferences(project.getDesignPreferences())
                 .status(project.getStatus())
                 .signedUrl(project.getSignedUrl())
-                .generatedHtml(project.getGeneratedHtml())
+                .aiMetadata(project.getAiMetadata())
                 .createdAt(project.getCreatedAt())
                 .build();
+    }
+
+    public LandingProject getProjectEntityById(Integer id) {
+        return projectRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
     }
 }

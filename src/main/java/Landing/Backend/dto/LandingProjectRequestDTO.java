@@ -4,7 +4,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import java.util.Map;
-
 import lombok.Data;
 
 @Data
@@ -19,10 +18,10 @@ public class LandingProjectRequestDTO {
     @NotBlank(message = "El sector del negocio es obligatorio")
     private String businessSector;
     
-    @NotBlank(message = "La descripcion del proyecto no puede estar vacia")
+    @NotBlank(message = "El tono de comunicacion no puede estar vacio")
     private String communicationTone;
 
-    @NotNull(message = "La paleta de colores es obligatorio")
-    @NotEmpty(message = "La paleta de colores no puede estar vacia")
-    private Map<String, Object> colorPalette; // JSON String
+    @NotNull(message = "Las preferencias de diseño son obligatorias")
+    @NotEmpty(message = "Las preferencias de diseño no pueden estar vacias")
+    private Map<String, Object> designPreferences; 
 }
