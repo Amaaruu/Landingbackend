@@ -1,0 +1,9 @@
+services:
+  backend:
+    build: .
+    container_name: landing-backend
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env # Le diremos a Docker que lea de aquí, pero será un secreto local
+    restart: unless-stopped
