@@ -23,16 +23,18 @@ public class AiService {
         
         Map<String, Object> requestPayload = new HashMap<>();
         
-        //Campos Base
+        // 1. Núcleo Obligatorio (Match exacto con Python)
         requestPayload.put("projectId", project.getProjectId());
         requestPayload.put("userPlan", userPlan);
         requestPayload.put("projectName", project.getProjectName());
         requestPayload.put("projectIdea", project.getProjectIdea());
         requestPayload.put("callToAction", project.getCallToAction());
+
+        // 2. Contexto Intermedio
         requestPayload.put("businessSector", project.getBusinessSector());
         requestPayload.put("communicationTone", project.getCommunicationTone());
 
-        //Desempaquetar los campos Premium desde el Map de diseño
+        // 3. Desempaquetado del JSON Premium
         if (project.getDesignPreferences() != null) {
             Map<String, Object> prefs = project.getDesignPreferences();
             requestPayload.put("colorPalette", prefs.get("colorPalette"));
@@ -41,7 +43,7 @@ public class AiService {
             requestPayload.put("customPrompt", prefs.get("customPrompt"));
         }
 
-        System.out.println("Solicitando IA para: " + project.getProjectName() + " | Plan: " + userPlan);
+        System.out.println("🚀 Solicitando IA a QA Server para: " + project.getProjectName() + " | Plan: " + userPlan);
         
         return restClient.post()
                 .uri("") 
