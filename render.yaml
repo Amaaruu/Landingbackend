@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: wlsuite-python-api
+    env: python
+    repo: https://github.com/Amaaruu/WLSuitePythonAPI 
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false 
+  - type: web
+    name: wlsuite-java-backend
+    env: docker 
+    plan: free
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        fromDatabase:
+          name: wlsuite-db
+          property: connectionString
+      - key: PYTHON_API_URL
+        fromService:
+          type: web
+          name: wlsuite-python-api
+          property: host
+        suffix: /api/v1/ai/generate
+      - key: JWT_SECRET
+        generateValue: true
+
+databases:
+  - name: wlsuite-db
+    plan: free
+    databaseName: landing_db
+    user: admin
