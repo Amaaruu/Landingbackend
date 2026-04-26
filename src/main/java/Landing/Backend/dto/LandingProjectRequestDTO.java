@@ -14,14 +14,17 @@ public class LandingProjectRequestDTO {
     
     @NotBlank(message = "El nombre del proyecto no puede estar vacio")
     private String projectName;
-    
-    @NotBlank(message = "El sector del negocio es obligatorio")
-    private String businessSector;
-    
-    @NotBlank(message = "El tono de comunicacion no puede estar vacio")
-    private String communicationTone;
 
-    @NotNull(message = "Las preferencias de diseño son obligatorias")
-    @NotEmpty(message = "Las preferencias de diseño no pueden estar vacias")
+    //Para todos los planes
+    @NotBlank(message = "La idea del proyecto es obligatoria")
+    private String projectIdea;
+    
+    @NotBlank(message = "El llamado a la accion (CTA) es obligatorio")
+    private String callToAction;
+    
+    // OPCIONALES (Para planes Intermedio y Premium)
+    // Quitamos los @NotBlank y @NotNull porque en el plan BÁSICO estos llegarán vacios
+    private String businessSector;
+    private String communicationTone;
     private Map<String, Object> designPreferences; 
 }
