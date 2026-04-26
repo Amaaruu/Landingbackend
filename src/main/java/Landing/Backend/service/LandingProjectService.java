@@ -20,7 +20,7 @@ public class LandingProjectService {
     private final TransactionRepository transactionRepository;
     private final AiService aiService;
 
-    // 1. Guardado Inicial (Conexión a BD Ultrarrápida)
+    // Guardado Inicial Rápido
     @Transactional
     public LandingProject saveInitialProject(LandingProjectRequestDTO request) {
         Transaction transaction = transactionRepository.findById(request.getTransactionId())
@@ -40,7 +40,7 @@ public class LandingProjectService {
         return projectRepository.save(project);
     }
 
-    // 2. Guardado Final Post-IA (Conexión a BD Ultrarrápida)
+    // Guardado Final Post-IA Rápido
     @Transactional
     public void updateProjectWithAiData(Integer projectId, AiResponseDTO aiResponse) {
         LandingProject project = projectRepository.findById(projectId)
@@ -59,25 +59,16 @@ public class LandingProjectService {
         });
     }
 
-    // EL FLUJO DE CREACIÓN MAESTRO (Libre de bloqueos)
+    // FLUJO MAESTRO (Asíncrono en BD)
     public LandingProjectResponseDTO createProject(LandingProjectRequestDTO request) {
         
-        // Paso A: Guardamos en PostgreSQL y soltamos la conexión
         LandingProject project = saveInitialProject(request);
-        
-        // Extraemos el plan pagado (Ej: "BASIC", "INTERMEDIATE", "PREMIUM")
         String userPlan = project.getTransaction().getPlan().getName().toUpperCase(); 
 
         try {
-            // Paso B: Llamada HTTP a Python (Esto puede tardar, pero no afecta a PostgreSQL)
             AiResponseDTO aiResponse = aiService.requestLandingGeneration(project, userPlan);
-            System.out.println("✅ JSON Estructural recibido. Motor usado: " + aiResponse.getAi_engine());
-            
-            // Paso C: Volvemos a conectarnos a BD rápido para guardar el resultado
             updateProjectWithAiData(project.getProjectId(), aiResponse);
-            
             return getProjectById(project.getProjectId());
-
         } catch (Exception e) {
             System.err.println("❌ Error con la IA: " + e.getMessage());
             markProjectAsFailed(project.getProjectId());
@@ -85,7 +76,6 @@ public class LandingProjectService {
         }
     }
 
-    // --- MÉTODOS DE LECTURA Y ACTUALIZACIÓN ---
     public List<LandingProjectResponseDTO> getAllProjects() {
         return projectRepository.findAll().stream()
                 .map(this::mapToResponse)
@@ -114,7 +104,13 @@ public class LandingProjectService {
         projectRepository.delete(project);
     }
 
-    // MAPPER INTERNO
+    // MÉTODO REQUERIDO POR LOGCONTROLLER
+    public LandingProject getProjectEntityById(Integer id) {
+        return projectRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
+    }
+
+    // MAPPER
     private LandingProjectResponseDTO mapToResponse(LandingProject project) {
         return LandingProjectResponseDTO.builder()
                 .projectId(project.getProjectId())
@@ -129,10 +125,5 @@ public class LandingProjectService {
                 .aiMetadata(project.getAiMetadata())
                 .createdAt(project.getCreatedAt())
                 .build();
-    }
-
-    public LandingProject getProjectEntityById(Integer id) {
-        return projectRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
     }
 }
