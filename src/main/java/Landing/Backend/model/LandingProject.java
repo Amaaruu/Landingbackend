@@ -36,13 +36,21 @@ public class LandingProject {
     @Column(name = "project_name", nullable = false)
     private String projectName;
 
-    @Column(name = "business_sector", nullable = false)
+    // Campos obligatorios para todos los planes
+    @Column(name = "project_idea", nullable = false, columnDefinition = "TEXT")
+    private String projectIdea;
+
+    @Column(name = "call_to_action", nullable = false)
+    private String callToAction;
+
+    //Ya NO son obligatorios a nivel de base de datos
+    @Column(name = "business_sector")
     private String businessSector;
 
-    @Column(name = "communication_tone", nullable = false)
+    @Column(name = "communication_tone")
     private String communicationTone;
 
-    // Renombrado para soportar opciones premium (animaciones, estilo, etc.)
+    //Renombrado para soportar opciones premium (animaciones, estilo, etc.)
     @JdbcTypeCode(SqlTypes.JSON) 
     @Column(name = "design_preferences", columnDefinition = "jsonb")
     private Map<String, Object> designPreferences;

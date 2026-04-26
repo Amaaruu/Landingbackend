@@ -22,15 +22,26 @@ public class AiService {
     public AiResponseDTO requestLandingGeneration(LandingProject project, String userPlan) {
         
         Map<String, Object> requestPayload = new HashMap<>();
+        
+        //Campos Base
         requestPayload.put("projectId", project.getProjectId());
+        requestPayload.put("userPlan", userPlan);
         requestPayload.put("projectName", project.getProjectName());
+        requestPayload.put("projectIdea", project.getProjectIdea());
+        requestPayload.put("callToAction", project.getCallToAction());
         requestPayload.put("businessSector", project.getBusinessSector());
         requestPayload.put("communicationTone", project.getCommunicationTone());
-        // Enviamos las preferencias de diseño como texto para que el prompt de Python las analice
-        requestPayload.put("colorPalette", project.getDesignPreferences() != null ? project.getDesignPreferences().toString() : "");
-        requestPayload.put("userPlan", userPlan);
 
-        System.out.println("🚀 Solicitando IA para: " + project.getProjectName() + " | Plan: " + userPlan);
+        //Desempaquetar los campos Premium desde el Map de diseño
+        if (project.getDesignPreferences() != null) {
+            Map<String, Object> prefs = project.getDesignPreferences();
+            requestPayload.put("colorPalette", prefs.get("colorPalette"));
+            requestPayload.put("visualStyle", prefs.get("visualStyle"));
+            requestPayload.put("animationLevel", prefs.get("animationLevel"));
+            requestPayload.put("customPrompt", prefs.get("customPrompt"));
+        }
+
+        System.out.println("Solicitando IA para: " + project.getProjectName() + " | Plan: " + userPlan);
         
         return restClient.post()
                 .uri("") 
