@@ -1,34 +1,42 @@
 services:
+  # ---------------------------------------------------
+  # 1. SERVICIO IA (Python - FastAPI)
+  # ---------------------------------------------------
   - type: web
     name: wlsuite-python-api
     env: python
-    repo: https://github.com/Amaaruu/WLSuitePythonAPI 
+    repo: https://github.com/amaaruu/wlsuitepythonapi 
     branch: main
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: OPENROUTER_API_KEY
-        sync: false 
+        sync: false # Render te pedirá que ingreses esto en su web
+
+  # ---------------------------------------------------
+  # 2. BACKEND CENTRAL (Java - Spring Boot)
+  # ---------------------------------------------------
   - type: web
     name: wlsuite-java-backend
-    env: docker 
+    env: docker # Lee automáticamente tu archivo Dockerfile
     plan: free
     envVars:
-      - key: SPRING_DATASOURCE_URL
-        fromDatabase:
-          name: wlsuite-db
-          property: connectionString
+      # Conexión a tu Base de Datos externa (Neon)
+      - key: DB_URL
+        value: "jdbc:postgresql://ep-delicate-union-amqi0je9-pooler.c-5.us-east-1.aws.neon.tech/neondb?sslmode=require"
+      - key: DB_USERNAME
+        value: "neondb_owner"
+      - key: DB_PASSWORD
+        sync: false # ¡Por seguridad de tu BD, ingresarás la contraseña directamente en Render!
+      
+      # Inyecta la URL de Python directamente a Java
       - key: PYTHON_API_URL
         fromService:
           type: web
           name: wlsuite-python-api
           property: host
         suffix: /api/v1/ai/generate
-      - key: JWT_SECRET
+      
+      # Genera un token secreto aleatorio para JWT
+      - key: JWT_SECRET_KEY
         generateValue: true
-
-databases:
-  - name: wlsuite-db
-    plan: free
-    databaseName: landing_db
-    user: admin
