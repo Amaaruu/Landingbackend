@@ -40,7 +40,14 @@ public class LandingProjectService {
         return projectRepository.save(project);
     }
 
-    // Guardado Final Post-IA Rápido
+    // Extracción segura del plan (Evita LazyInitializationException)
+    @Transactional
+    public String getUserPlanSafe(Integer transactionId) {
+        Transaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new RuntimeException("Transacción no encontrada"));
+        return transaction.getPlan().getName().toUpperCase();
+    }
+
     @Transactional
     public void updateProjectWithAiData(Integer projectId, AiResponseDTO aiResponse) {
         LandingProject project = projectRepository.findById(projectId)
@@ -63,7 +70,8 @@ public class LandingProjectService {
     public LandingProjectResponseDTO createProject(LandingProjectRequestDTO request) {
         
         LandingProject project = saveInitialProject(request);
-        String userPlan = project.getTransaction().getPlan().getName().toUpperCase(); 
+        // Usamos el método seguro para obtener el plan con una sesión abierta
+        String userPlan = getUserPlanSafe(request.getTransactionId()); 
 
         try {
             AiResponseDTO aiResponse = aiService.requestLandingGeneration(project, userPlan);
@@ -104,7 +112,6 @@ public class LandingProjectService {
         projectRepository.delete(project);
     }
 
-    // MÉTODO REQUERIDO POR LOGCONTROLLER
     public LandingProject getProjectEntityById(Integer id) {
         return projectRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
