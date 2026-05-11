@@ -27,13 +27,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            // Habilitamos CORS con la configuración definida abajo
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
-                // Rutas públicas: Auth, Health Check y Documentación
                 .requestMatchers("/api/v1/auth/**", "/api/v1/health", "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
-                // Cualquier otra ruta requiere token JWT válido
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -47,16 +44,9 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // Permitimos el origen de desarrollo local (Vite/React)
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-        
-        // Métodos HTTP permitidos para la API
+        configuration.setAllowedOriginPatterns(List.of("http://localhost:*", "https://*.onrender.com", "https://*.vercel.app"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        
-        // Cabeceras permitidas (necesarias para enviar el token JWT)
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Cache-Control"));
-        
-        // Permitir envío de credenciales/cookies si fuera necesario
         configuration.setAllowCredentials(true);
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
