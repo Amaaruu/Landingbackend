@@ -3,11 +3,13 @@ package Landing.Backend.controller;
 import Landing.Backend.dto.AuthResponseDTO;
 import Landing.Backend.dto.LoginRequestDTO;
 import Landing.Backend.dto.UserRequestDTO;
+import Landing.Backend.exception.BusinessLogicException;
 import Landing.Backend.model.User;
 import Landing.Backend.repository.UserRepository;
 import Landing.Backend.security.JwtService;
 import Landing.Backend.service.EmailService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -15,6 +17,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -26,26 +29,36 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder; 
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
-    private final EmailService emailService; // Inyección del servicio asíncrono
+    private final EmailService emailService;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponseDTO> register(@Valid @RequestBody UserRequestDTO request) {
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new RuntimeException("El correo ya está registrado");
+        Optional<User> existingUser = userRepository.findByEmail(request.getEmail());
+        User user;
+        
+        if (existingUser.isPresent()) {
+            user = existingUser.get();
+            if (user.getActive()) {
+                throw new BusinessLogicException("El correo ya está registrado", HttpStatus.CONFLICT);
+            }
+            user.setActive(true);
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+            user.setName(request.getName());
+            user.setLastName(request.getLastname());
+            user.setRole(request.getRole());
+            userRepository.save(user);
+        } else {
+            user = User.builder()
+                    .name(request.getName())
+                    .lastName(request.getLastname())
+                    .email(request.getEmail())
+                    .password(passwordEncoder.encode(request.getPassword())) 
+                    .role(request.getRole())
+                    .active(true)
+                    .build();
+            userRepository.save(user);
         }
 
-        User user = User.builder()
-                .name(request.getName())
-                .lastName(request.getLastname())
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword())) 
-                .role(request.getRole())
-                .active(true)
-                .build();
-        
-        userRepository.save(user);
-
-        // Disparo del evento asíncrono (No bloquea la respuesta al cliente)
         emailService.sendWelcomeEmail(user.getEmail(), user.getName());
 
         var userDetails = org.springframework.security.core.userdetails.User.builder()
@@ -64,14 +77,13 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Valid
-    public ResponseEntity<AuthResponseDTO> login(@RequestBody LoginRequestDTO request) {
+    public ResponseEntity<AuthResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
         
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new BusinessLogicException("Usuario no encontrado", HttpStatus.NOT_FOUND));
         
         var userDetails = org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
