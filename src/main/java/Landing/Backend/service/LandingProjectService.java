@@ -8,9 +8,10 @@ import Landing.Backend.model.Transaction;
 import Landing.Backend.repository.LandingProjectRepository;
 import Landing.Backend.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -19,8 +20,8 @@ public class LandingProjectService {
     private final LandingProjectRepository projectRepository;
     private final TransactionRepository transactionRepository;
     private final AiService aiService;
+    private final EmailService emailService;
 
-    // Guardado Inicial Rápido
     @Transactional
     public LandingProject saveInitialProject(LandingProjectRequestDTO request) {
         Transaction transaction = transactionRepository.findById(request.getTransactionId())
@@ -40,7 +41,6 @@ public class LandingProjectService {
         return projectRepository.save(project);
     }
 
-    // Extracción segura del plan (Evita LazyInitializationException)
     @Transactional
     public String getUserPlanSafe(Integer transactionId) {
         Transaction transaction = transactionRepository.findById(transactionId)
@@ -56,6 +56,12 @@ public class LandingProjectService {
         project.setAiMetadata(aiResponse.getAiMetadata());
         project.setStatus("Ready");
         projectRepository.save(project);
+
+        // Notificación asíncrona de éxito
+        emailService.sendProjectReadyEmail(
+            project.getTransaction().getUser().getEmail(), 
+            project.getProjectName()
+        );
     }
 
     @Transactional
@@ -66,11 +72,8 @@ public class LandingProjectService {
         });
     }
 
-    // FLUJO MAESTRO (Asíncrono en BD)
     public LandingProjectResponseDTO createProject(LandingProjectRequestDTO request) {
-        
         LandingProject project = saveInitialProject(request);
-        // Usamos el método seguro para obtener el plan con una sesión abierta
         String userPlan = getUserPlanSafe(request.getTransactionId()); 
 
         try {
@@ -84,10 +87,10 @@ public class LandingProjectService {
         }
     }
 
-    public List<LandingProjectResponseDTO> getAllProjects() {
-        return projectRepository.findAll().stream()
-                .map(this::mapToResponse)
-                .toList();
+    // Paginación habilitada para escalabilidad
+    public Page<LandingProjectResponseDTO> getAllProjects(Pageable pageable) {
+        return projectRepository.findAll(pageable)
+                .map(this::mapToResponse);
     }
 
     public LandingProjectResponseDTO getProjectById(Integer id) {
@@ -117,7 +120,6 @@ public class LandingProjectService {
                 .orElseThrow(() -> new RuntimeException("Proyecto no encontrado"));
     }
 
-    // MAPPER
     private LandingProjectResponseDTO mapToResponse(LandingProject project) {
         return LandingProjectResponseDTO.builder()
                 .projectId(project.getProjectId())

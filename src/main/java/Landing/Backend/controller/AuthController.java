@@ -6,6 +6,7 @@ import Landing.Backend.dto.UserRequestDTO;
 import Landing.Backend.model.User;
 import Landing.Backend.repository.UserRepository;
 import Landing.Backend.security.JwtService;
+import Landing.Backend.service.EmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -25,6 +26,7 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder; 
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final EmailService emailService; // Inyección del servicio asíncrono
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponseDTO> register(@Valid @RequestBody UserRequestDTO request) {
@@ -43,10 +45,13 @@ public class AuthController {
         
         userRepository.save(user);
 
+        // Disparo del evento asíncrono (No bloquea la respuesta al cliente)
+        emailService.sendWelcomeEmail(user.getEmail(), user.getName());
+
         var userDetails = org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
                 .password(user.getPassword())
-                .authorities(user.getRole()) // <-- Cambio clave: Mantiene el string exacto
+                .authorities(user.getRole()) 
                 .build();
 
         String jwtToken = jwtService.generateToken(userDetails);
@@ -70,7 +75,7 @@ public class AuthController {
         var userDetails = org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
                 .password(user.getPassword())
-                .authorities(user.getRole()) // <-- Cambio clave: Mantiene el string exacto
+                .authorities(user.getRole())
                 .build();
 
         String jwtToken = jwtService.generateToken(userDetails); 
