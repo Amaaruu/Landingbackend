@@ -58,6 +58,7 @@ public class AuthController {
         return ResponseEntity.ok(AuthResponseDTO.builder()
                 .token(jwtToken)
                 .message("Registro exitoso")
+                .name(user.getName())
                 .build());
     }
 
@@ -84,6 +85,7 @@ public class AuthController {
         return ResponseEntity.ok(AuthResponseDTO.builder()
                 .token(jwtToken)
                 .message("Login exitoso")
+                .name(user.getName())
                 .build());
     }
 }
