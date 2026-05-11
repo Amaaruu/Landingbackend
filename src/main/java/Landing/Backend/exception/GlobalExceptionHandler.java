@@ -4,6 +4,7 @@ import Landing.Backend.dto.ErrorResponseDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -12,7 +13,20 @@ import java.time.LocalDateTime;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // Evita el error 500 y devuelve un 401 semántico para el Frontend
+    // Manejo de errores de validación (Ej: contraseñas cortas, campos vacíos)
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponseDTO> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        // Obtenemos el primer mensaje de error definido en las anotaciones del DTO
+        String errorMessage = ex.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
+        
+        ErrorResponseDTO error = ErrorResponseDTO.builder()
+                .timestamp(LocalDateTime.now())
+                .message(errorMessage)
+                .status(HttpStatus.BAD_REQUEST.value())
+                .build();
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponseDTO> handleBadCredentials(BadCredentialsException ex) {
         ErrorResponseDTO error = ErrorResponseDTO.builder()
