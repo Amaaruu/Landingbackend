@@ -28,14 +28,10 @@ services:
         value: "neondb_owner"
       - key: DB_PASSWORD
         sync: false # ¡Por seguridad de tu BD, ingresarás la contraseña directamente en Render!
-      
-      # Inyecta la URL de Python directamente a Java
+
+      # Inyecta la URL de Python directamente a Java (Asegurando el HTTPS)
       - key: PYTHON_API_URL
-        fromService:
-          type: web
-          name: wlsuite-python-api
-          property: host
-        suffix: /api/v1/ai/generate
+        value: "https://wlsuitepythonapi.onrender.com/api/v1/ai/generate"
       
       # Genera un token secreto aleatorio para JWT
       - key: JWT_SECRET_KEY
