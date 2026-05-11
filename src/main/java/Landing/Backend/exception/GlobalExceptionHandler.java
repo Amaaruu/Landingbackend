@@ -13,47 +13,38 @@ import java.time.LocalDateTime;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // Manejo de errores de validación (Ej: contraseñas cortas, campos vacíos)
+    @ExceptionHandler(BusinessLogicException.class)
+    public ResponseEntity<ErrorResponseDTO> handleBusinessLogic(BusinessLogicException ex) {
+        return buildResponse(ex.getMessage(), ex.getStatus());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponseDTO> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        // Obtenemos el primer mensaje de error definido en las anotaciones del DTO
-        String errorMessage = ex.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
-        
-        ErrorResponseDTO error = ErrorResponseDTO.builder()
-                .timestamp(LocalDateTime.now())
-                .message(errorMessage)
-                .status(HttpStatus.BAD_REQUEST.value())
-                .build();
-        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    public ResponseEntity<ErrorResponseDTO> handleValidation(MethodArgumentNotValidException ex) {
+        String msg = ex.getBindingResult().getFieldErrors().get(0).getDefaultMessage();
+        return buildResponse(msg, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponseDTO> handleBadCredentials(BadCredentialsException ex) {
-        ErrorResponseDTO error = ErrorResponseDTO.builder()
-                .timestamp(LocalDateTime.now())
-                .message("Correo o contraseña incorrectos")
-                .status(HttpStatus.UNAUTHORIZED.value())
-                .build();
-        return new ResponseEntity<>(error, HttpStatus.UNAUTHORIZED);
+        return buildResponse("Correo o contraseña incorrectos", HttpStatus.UNAUTHORIZED);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponseDTO> handleResourceNotFound(ResourceNotFoundException ex) {
-        ErrorResponseDTO error = ErrorResponseDTO.builder()
-                .timestamp(LocalDateTime.now())
-                .message(ex.getMessage())
-                .status(HttpStatus.NOT_FOUND.value())
-                .build();
-        return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
+    public ResponseEntity<ErrorResponseDTO> handleNotFound(ResourceNotFoundException ex) {
+        return buildResponse(ex.getMessage(), HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDTO> handleGlobalException(Exception ex) {
+        return buildResponse("Error interno del servidor: " + ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    private ResponseEntity<ErrorResponseDTO> buildResponse(String message, HttpStatus status) {
         ErrorResponseDTO error = ErrorResponseDTO.builder()
                 .timestamp(LocalDateTime.now())
-                .message("Error interno del servidor: " + ex.getMessage())
-                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                .message(message)
+                .status(status.value())
                 .build();
-        return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
+        return new ResponseEntity<>(error, status);
     }
 }
