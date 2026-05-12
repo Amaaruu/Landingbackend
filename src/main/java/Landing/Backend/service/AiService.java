@@ -56,7 +56,7 @@ public class AiService {
                 + " | ProjectId: " + project.getProjectId());
 
         return restClient.post()
-                .uri("")
+                .uri("/api/v1/ai/generate")
                 .body(requestPayload)
                 .retrieve()
                 .body(AiResponseDTO.class);
