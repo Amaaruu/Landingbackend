@@ -30,7 +30,14 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/v1/auth/**", "/api/v1/health", "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
+                .requestMatchers(
+                    "/api/v1/auth/**",
+                    "/api/v1/health",
+                    "/landings/**",
+                    "/swagger-ui/**",
+                    "/v3/api-docs/**",
+                    "/error"
+                ).permitAll()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -43,12 +50,15 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        
-        configuration.setAllowedOriginPatterns(List.of("http://localhost:*", "https://*.onrender.com", "https://*.vercel.app"));
+        configuration.setAllowedOriginPatterns(List.of(
+            "http://localhost:*",
+            "https://*.onrender.com",
+            "https://*.vercel.app"
+        ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Cache-Control"));
         configuration.setAllowCredentials(true);
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
