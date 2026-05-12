@@ -73,6 +73,7 @@ public class AuthController {
                 .token(jwtToken)
                 .message("Registro exitoso")
                 .name(user.getName())
+                .userId(user.getUserId())
                 .build());
     }
 
@@ -97,6 +98,7 @@ public class AuthController {
                 .token(jwtToken)
                 .message("Login exitoso")
                 .name(user.getName())
+                .userId(user.getUserId())
                 .build());
     }
 }
