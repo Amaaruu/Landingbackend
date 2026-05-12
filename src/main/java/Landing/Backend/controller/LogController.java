@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import Landing.Backend.dto.LogRequestDTO;
 import Landing.Backend.dto.LogResponseDTO;
+import Landing.Backend.exception.ResourceNotFoundException;
 import Landing.Backend.model.LandingProject;
 import Landing.Backend.model.Log;
 import Landing.Backend.model.User;
@@ -41,13 +42,13 @@ public class LogController {
     public ResponseEntity<LogResponseDTO> createLog(@Valid @RequestBody LogRequestDTO requestDTO) {
         
         User user = userService.findById(requestDTO.getUserId())
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado para el log"));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado para el log"));
 
         LandingProject project = null;
         if (requestDTO.getProjectId() != null) {
-            // Usamos el nuevo método interno que nos da la Entidad directa
             project = landingProjectService.getProjectEntityById(requestDTO.getProjectId());
         }
+        
         Log log = new Log();
         log.setUser(user);
         log.setProject(project);
