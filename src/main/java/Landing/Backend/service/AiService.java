@@ -16,7 +16,7 @@ public class AiService {
 
     public AiService(@Value("${python.api.url}") String apiUrl) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(15_000);
+        factory.setConnectTimeout(60_000);
         factory.setReadTimeout(180_000);
 
         this.restClient = RestClient.builder()
