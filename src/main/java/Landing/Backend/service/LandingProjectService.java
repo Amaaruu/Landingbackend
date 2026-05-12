@@ -21,6 +21,7 @@ public class LandingProjectService {
     private final TransactionRepository transactionRepository;
     private final AiService aiService;
     private final EmailService emailService;
+    private final AiGenerationTask aiGenerationTask;
 
     @Transactional
     public LandingProject saveInitialProject(LandingProjectRequestDTO request) {
@@ -48,6 +49,16 @@ public class LandingProjectService {
         return transaction.getPlan().getName().toUpperCase();
     }
 
+    public LandingProjectResponseDTO createProject(LandingProjectRequestDTO request) {
+        LandingProject project = saveInitialProject(request);
+        Integer projectId = project.getProjectId();
+        String userPlan = getUserPlanSafe(request.getTransactionId());
+
+        System.out.println("📋 Proyecto #" + projectId + " guardado en 'Processing' | Plan: " + userPlan);
+        aiGenerationTask.execute(projectId, userPlan);
+        return getProjectById(projectId);
+    }
+
     @Transactional
     public void updateProjectWithAiData(Integer projectId, AiResponseDTO aiResponse) {
         LandingProject project = projectRepository.findById(projectId)
@@ -69,27 +80,6 @@ public class LandingProjectService {
             project.setStatus("Failed");
             projectRepository.save(project);
         });
-    }
-
-    public LandingProjectResponseDTO createProject(LandingProjectRequestDTO request) {
-        LandingProject project = saveInitialProject(request);
-        Integer projectId = project.getProjectId();
-        String userPlan = getUserPlanSafe(request.getTransactionId());
-
-        System.out.println("Proyecto #" + projectId + " guardado en 'Processing' | Plan: " + userPlan);
-
-        try {
-            AiResponseDTO aiResponse = aiService.requestLandingGeneration(project, userPlan);
-            updateProjectWithAiData(projectId, aiResponse);
-            System.out.println("✅ Proyecto #" + projectId + " completado exitosamente.");
-            return getProjectById(projectId);
-        } catch (Exception e) {
-            System.err.println("Error en proyecto #" + projectId
-                    + " | " + e.getClass().getSimpleName()
-                    + ": " + e.getMessage());
-            markProjectAsFailed(projectId);
-            return getProjectById(projectId);
-        }
     }
 
     public Page<LandingProjectResponseDTO> getAllProjects(Pageable pageable) {
