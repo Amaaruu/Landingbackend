@@ -15,10 +15,9 @@ public class AiService {
     private final RestClient restClient;
 
     public AiService(@Value("${python.api.url}") String apiUrl) {
-        // Blindaje contra cuelgues infinitos si Python falla
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(10000); // 10 segundos para conectar
-        factory.setReadTimeout(60000);    // 60 segundos esperando respuesta de Claude/GPT
+        factory.setConnectTimeout(15_000);
+        factory.setReadTimeout(180_000);
 
         this.restClient = RestClient.builder()
                 .requestFactory(factory)
@@ -27,30 +26,40 @@ public class AiService {
     }
 
     public AiResponseDTO requestLandingGeneration(LandingProject project, String userPlan) {
-        
+
         Map<String, Object> requestPayload = new HashMap<>();
-        
-        requestPayload.put("projectId", project.getProjectId());
-        requestPayload.put("userPlan", userPlan);
-        requestPayload.put("projectName", project.getProjectName());
-        requestPayload.put("projectIdea", project.getProjectIdea());
+
+        requestPayload.put("projectId",    project.getProjectId());
+        requestPayload.put("userPlan",     userPlan);
+        requestPayload.put("projectName",  project.getProjectName());
+        requestPayload.put("projectIdea",  project.getProjectIdea());
         requestPayload.put("callToAction", project.getCallToAction());
-        requestPayload.put("businessSector", project.getBusinessSector());
-        requestPayload.put("communicationTone", project.getCommunicationTone());
+
+        // Campos opcionales siempre presentes como "" para no romper Pydantic con null
+        requestPayload.put("businessSector",    project.getBusinessSector()    != null ? project.getBusinessSector()    : "");
+        requestPayload.put("communicationTone", project.getCommunicationTone() != null ? project.getCommunicationTone() : "");
 
         if (project.getDesignPreferences() != null) {
             Map<String, Object> prefs = project.getDesignPreferences();
-            // Prevención de NullPointerExceptions hacia FastAPI
-            requestPayload.put("colorPalette", prefs.getOrDefault("colorPalette", "default"));
-            requestPayload.put("visualStyle", prefs.getOrDefault("visualStyle", "minimalist"));
+            requestPayload.put("colorPalette",   prefs.getOrDefault("colorPalette",   "Modern Blue"));
+            requestPayload.put("visualStyle",    prefs.getOrDefault("visualStyle",    "minimalist"));
             requestPayload.put("animationLevel", prefs.getOrDefault("animationLevel", "medium"));
-            requestPayload.put("customPrompt", prefs.getOrDefault("customPrompt", ""));
+            requestPayload.put("customPrompt",   prefs.getOrDefault("customPrompt",   ""));
+        } else {
+            // Garantiza que los campos lleguen aunque no haya designPreferences
+            requestPayload.put("colorPalette",   "Modern Blue");
+            requestPayload.put("visualStyle",    "minimalist");
+            requestPayload.put("animationLevel", "medium");
+            requestPayload.put("customPrompt",   "");
         }
 
-        System.out.println("🚀 Solicitando IA a QA Server para: " + project.getProjectName() + " | Plan: " + userPlan);
-        
+        System.out.println("Enviando solicitud a Python AI | Proyecto: "
+                + project.getProjectName() + " | Plan: " + userPlan
+                + " | ProjectId: " + project.getProjectId());
+
+        // URI explícita: el path se separa del baseUrl para que RestClient no lo trunque
         return restClient.post()
-                .uri("") 
+                .uri("/api/v1/ai/generate")
                 .body(requestPayload)
                 .retrieve()
                 .body(AiResponseDTO.class);
