@@ -35,7 +35,6 @@ public class AiService {
         requestPayload.put("projectIdea",  project.getProjectIdea());
         requestPayload.put("callToAction", project.getCallToAction());
 
-        // Campos opcionales siempre presentes como "" para no romper Pydantic con null
         requestPayload.put("businessSector",    project.getBusinessSector()    != null ? project.getBusinessSector()    : "");
         requestPayload.put("communicationTone", project.getCommunicationTone() != null ? project.getCommunicationTone() : "");
 
@@ -46,7 +45,6 @@ public class AiService {
             requestPayload.put("animationLevel", prefs.getOrDefault("animationLevel", "medium"));
             requestPayload.put("customPrompt",   prefs.getOrDefault("customPrompt",   ""));
         } else {
-            // Garantiza que los campos lleguen aunque no haya designPreferences
             requestPayload.put("colorPalette",   "Modern Blue");
             requestPayload.put("visualStyle",    "minimalist");
             requestPayload.put("animationLevel", "medium");
@@ -57,9 +55,8 @@ public class AiService {
                 + project.getProjectName() + " | Plan: " + userPlan
                 + " | ProjectId: " + project.getProjectId());
 
-        // URI explícita: el path se separa del baseUrl para que RestClient no lo trunque
         return restClient.post()
-                .uri("/api/v1/ai/generate")
+                .uri("")
                 .body(requestPayload)
                 .retrieve()
                 .body(AiResponseDTO.class);
