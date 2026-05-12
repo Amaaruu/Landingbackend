@@ -1,10 +1,14 @@
 package Landing.Backend.security;
 
+import Landing.Backend.exception.BusinessLogicException;
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +27,9 @@ public class JwtService {
 
     @Value("${application.security.jwt.expiration}")
     private long jwtExpiration;
+
+    @Value("${application.landing.token.expiration}")
+    private long landingTokenExpiration;
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
@@ -73,8 +80,34 @@ public class JwtService {
     }
 
     private Key getSignInKey() {
-        // Corrección: Usamos getBytes con UTF_8 para evitar errores de decodificación Base64
         byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    public String generateLandingToken(Integer projectId) {
+        return Jwts.builder()
+                .setSubject(String.valueOf(projectId))
+                .claim("type", "landing_access")
+                .setIssuedAt(new Date(System.currentTimeMillis()))
+                .setExpiration(new Date(System.currentTimeMillis() + landingTokenExpiration))
+                .signWith(getSignInKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    public Integer validateLandingToken(String token) {
+        try {
+            Claims claims = extractAllClaims(token);
+
+            if (!"landing_access".equals(claims.get("type"))) {
+                throw new BusinessLogicException("Token inválido", HttpStatus.FORBIDDEN);
+            }
+
+            return Integer.parseInt(claims.getSubject());
+
+        } catch (ExpiredJwtException e) {
+            throw new BusinessLogicException("El enlace ha expirado", HttpStatus.GONE);
+        } catch (JwtException e) {
+            throw new BusinessLogicException("Token inválido o manipulado", HttpStatus.FORBIDDEN);
+        }
     }
 }

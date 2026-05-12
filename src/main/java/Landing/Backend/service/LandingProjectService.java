@@ -47,15 +47,23 @@ public class LandingProjectService {
         return transaction.getPlan().getName().toUpperCase();
     }
 
+    @Transactional(readOnly = true)
+     String getUserEmailSafe(Integer projectId) {
+        LandingProject project = projectRepository.findById(projectId)
+            .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado: " + projectId));
+        return project.getTransaction().getUser().getEmail();
+    }
+
     public LandingProjectResponseDTO createProject(LandingProjectRequestDTO request) {
         LandingProject project = saveInitialProject(request);
         Integer projectId = project.getProjectId();
-        String userPlan = getUserPlanSafe(request.getTransactionId());
+        String userPlan  = getUserPlanSafe(request.getTransactionId());
+        String userEmail = getUserEmailSafe(projectId);
 
-        System.out.println("📋 Proyecto #" + projectId + " guardado en 'Processing' | Plan: " + userPlan);
-        
-        aiGenerationTask.execute(projectId, userPlan);
-        
+        System.out.println("Proyecto #" + projectId + " | Plan: " + userPlan);
+
+        aiGenerationTask.execute(projectId, userPlan, userEmail);
+
         return getProjectById(projectId);
     }
 
