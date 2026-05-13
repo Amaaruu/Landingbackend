@@ -19,4 +19,10 @@ public class LandingProjectResponseDTO {
     private LocalDateTime createdAt;
     private String projectIdea;
     private String callToAction;
+    private String landingGoal;
+    private String targetAudience;
+    private String brandPositioning;
+    private String brandStage;
+    private String valueProposition;
+    private String formalityLevel;
 }
