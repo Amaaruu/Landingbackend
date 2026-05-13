@@ -42,12 +42,29 @@ public class LandingProject {
     @Column(name = "call_to_action", nullable = false)
     private String callToAction;
 
-    // Campos opcionales a nivel de BD (Soportan nulos para el Plan Básico)
     @Column(name = "business_sector")
     private String businessSector;
 
     @Column(name = "communication_tone")
     private String communicationTone;
+
+    @Column(name = "landing_goal")
+    private String landingGoal;
+
+    @Column(name = "target_audience")
+    private String targetAudience;
+
+    @Column(name = "brand_positioning")
+    private String brandPositioning;
+
+    @Column(name = "brand_stage")
+    private String brandStage;
+
+    @Column(name = "value_proposition")
+    private String valueProposition;
+
+    @Column(name = "formality_level")
+    private String formalityLevel;
 
     @JdbcTypeCode(SqlTypes.JSON) 
     @Column(name = "design_preferences", columnDefinition = "jsonb")

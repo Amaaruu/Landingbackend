@@ -24,7 +24,8 @@ public class LandingProjectService {
     @Transactional
     public LandingProject saveInitialProject(LandingProjectRequestDTO request) {
         Transaction transaction = transactionRepository.findById(request.getTransactionId())
-                .orElseThrow(() -> new ResourceNotFoundException("Transacción no encontrada con ID: " + request.getTransactionId()));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Transacción no encontrada con ID: " + request.getTransactionId()));
 
         LandingProject project = LandingProject.builder()
                 .transaction(transaction)
@@ -34,6 +35,13 @@ public class LandingProjectService {
                 .businessSector(request.getBusinessSector())
                 .communicationTone(request.getCommunicationTone())
                 .designPreferences(request.getDesignPreferences())
+                .landingGoal(request.getLandingGoal())
+                .targetAudience(request.getTargetAudience())
+                .brandPositioning(request.getBrandPositioning())
+                .brandStage(request.getBrandStage())
+                .valueProposition(request.getValueProposition())
+                .formalityLevel(request.getFormalityLevel())
+
                 .status("Processing")
                 .build();
 
@@ -43,22 +51,24 @@ public class LandingProjectService {
     @Transactional(readOnly = true)
     public String getUserPlanSafe(Integer transactionId) {
         Transaction transaction = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Transacción no encontrada con ID: " + transactionId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Transacción no encontrada con ID: " + transactionId));
         return transaction.getPlan().getName().toUpperCase();
     }
 
     @Transactional(readOnly = true)
-     String getUserEmailSafe(Integer projectId) {
+    String getUserEmailSafe(Integer projectId) {
         LandingProject project = projectRepository.findById(projectId)
-            .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado: " + projectId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Proyecto no encontrado: " + projectId));
         return project.getTransaction().getUser().getEmail();
     }
 
     public LandingProjectResponseDTO createProject(LandingProjectRequestDTO request) {
         LandingProject project = saveInitialProject(request);
         Integer projectId = project.getProjectId();
-        String userPlan  = getUserPlanSafe(request.getTransactionId());
-        String userEmail = getUserEmailSafe(projectId);
+        String userPlan   = getUserPlanSafe(request.getTransactionId());
+        String userEmail  = getUserEmailSafe(projectId);
 
         System.out.println("Proyecto #" + projectId + " | Plan: " + userPlan);
 
@@ -73,14 +83,16 @@ public class LandingProjectService {
 
     public LandingProjectResponseDTO getProjectById(Integer id) {
         LandingProject project = projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Proyecto no encontrado con ID: " + id));
         return mapToResponse(project);
     }
 
     @Transactional
     public LandingProjectResponseDTO updateProjectStatus(Integer id, String status) {
         LandingProject project = projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Proyecto no encontrado con ID: " + id));
         project.setStatus(status);
         projectRepository.save(project);
         return mapToResponse(project);
@@ -89,13 +101,15 @@ public class LandingProjectService {
     @Transactional
     public void deleteProject(Integer id) {
         LandingProject project = projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Proyecto no encontrado con ID: " + id));
         projectRepository.delete(project);
     }
 
     public LandingProject getProjectEntityById(Integer id) {
         return projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Proyecto no encontrado con ID: " + id));
     }
 
     private LandingProjectResponseDTO mapToResponse(LandingProject project) {
@@ -111,6 +125,13 @@ public class LandingProjectService {
                 .signedUrl(project.getSignedUrl())
                 .aiMetadata(project.getAiMetadata())
                 .createdAt(project.getCreatedAt())
+                .landingGoal(project.getLandingGoal())
+                .targetAudience(project.getTargetAudience())
+                .brandPositioning(project.getBrandPositioning())
+                .brandStage(project.getBrandStage())
+                .valueProposition(project.getValueProposition())
+                .formalityLevel(project.getFormalityLevel())
+
                 .build();
     }
 }
