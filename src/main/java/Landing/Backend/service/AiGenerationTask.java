@@ -31,11 +31,14 @@ public class AiGenerationTask {
 
             AiResponseDTO aiResponse = aiService.requestLandingGeneration(project, userPlan);
 
-            // Generar token firmado con expiración de 24h
+            if (aiResponse.getContent() == null || aiResponse.getContent().isEmpty()) {
+                throw new RuntimeException("La API Python retornó contenido vacío para proyecto #" + projectId);
+            }
+
             String token = jwtService.generateLandingToken(projectId);
             String signedUrl = landingBaseUrl + "/landings/" + projectId + "?token=" + token;
 
-            project.setAiMetadata(aiResponse.getAiMetadata());
+            project.setAiMetadata(aiResponse.getContent());
             project.setSignedUrl(signedUrl);
             project.setUrlExpiresAt(LocalDateTime.now().plusHours(24));
             project.setStatus("Ready");
@@ -43,7 +46,7 @@ public class AiGenerationTask {
 
             emailService.sendProjectReadyEmail(userEmail, project.getProjectName(), signedUrl);
 
-            System.out.println("✅ Proyecto #" + projectId + " completado | URL: " + signedUrl);
+            System.out.println("Proyecto #" + projectId + " completado | URL: " + signedUrl);
 
         } catch (Exception e) {
             System.err.println("Error en proyecto #" + projectId
