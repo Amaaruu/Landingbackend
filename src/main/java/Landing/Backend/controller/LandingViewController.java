@@ -1,3 +1,4 @@
+// src/main/java/Landing/Backend/controller/LandingViewController.java
 package Landing.Backend.controller;
 
 import Landing.Backend.exception.BusinessLogicException;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -24,10 +26,8 @@ public class LandingViewController {
             @PathVariable Integer id,
             @RequestParam String token) {
         try {
-            // Valida el token y extrae el projectId
             Integer tokenProjectId = jwtService.validateLandingToken(token);
 
-            // Verifica que el token corresponde al proyecto solicitado
             if (!tokenProjectId.equals(id)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
                         .body(Map.of("error", "Token no corresponde a este proyecto"));
@@ -35,20 +35,20 @@ public class LandingViewController {
 
             LandingProject project = projectService.getProjectEntityById(id);
 
-            // Doble verificación por fecha en BD
             if (project.getUrlExpiresAt() != null &&
                 project.getUrlExpiresAt().isBefore(LocalDateTime.now())) {
                 return ResponseEntity.status(HttpStatus.GONE)
                         .body(Map.of("error", "El enlace ha expirado. Genera una nueva landing desde tu cuenta."));
             }
 
-            // Devuelve el aiMetadata con el que el frontend puede renderizar la landing
-            return ResponseEntity.ok(Map.of(
-                    "projectId",   project.getProjectId(),
-                    "projectName", project.getProjectName(),
-                    "aiMetadata",  project.getAiMetadata(),
-                    "status",      project.getStatus()
-            ));
+            Map<String, Object> response = new HashMap<>();
+            response.put("projectId",         project.getProjectId());
+            response.put("projectName",        project.getProjectName());
+            response.put("aiMetadata",         project.getAiMetadata());
+            response.put("designPreferences",  project.getDesignPreferences());
+            response.put("status",             project.getStatus());
+
+            return ResponseEntity.ok(response);
 
         } catch (BusinessLogicException e) {
             return ResponseEntity.status(e.getStatus())
