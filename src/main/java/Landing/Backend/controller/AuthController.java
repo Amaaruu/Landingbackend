@@ -8,7 +8,9 @@ import Landing.Backend.model.User;
 import Landing.Backend.repository.UserRepository;
 import Landing.Backend.security.JwtService;
 import Landing.Backend.service.EmailService;
+import Landing.Backend.service.LogService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,12 +18,14 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -33,9 +37,13 @@ public class AuthController {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
+    private final LogService logService;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponseDTO> register(@Valid @RequestBody UserRequestDTO request) {
+    public ResponseEntity<AuthResponseDTO> register(
+            @Valid @RequestBody UserRequestDTO request,
+            HttpServletRequest httpRequest) {
+
         Optional<User> existingUser = userRepository.findByEmail(request.getEmail());
         User user;
 
@@ -64,6 +72,9 @@ public class AuthController {
 
         emailService.sendWelcomeEmail(user.getEmail(), user.getName());
 
+        String clientIp = extractClientIp(httpRequest);
+        logService.recordEvent(user, null, "USER_REGISTERED", clientIp);
+
         var userDetails = org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
                 .password(user.getPassword())
@@ -84,13 +95,19 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
+    public ResponseEntity<AuthResponseDTO> login(
+            @Valid @RequestBody LoginRequestDTO request,
+            HttpServletRequest httpRequest) {
+
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BusinessLogicException("Usuario no encontrado", HttpStatus.NOT_FOUND));
+
+        String clientIp = extractClientIp(httpRequest);
+        logService.recordEvent(user, null, "USER_LOGIN", clientIp);
 
         var userDetails = org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
@@ -109,5 +126,17 @@ public class AuthController {
                 .name(user.getName())
                 .userId(user.getUserId())
                 .build());
+    }
+
+    private String extractClientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp.trim();
+        }
+        return request.getRemoteAddr();
     }
 }

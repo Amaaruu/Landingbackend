@@ -5,12 +5,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import Landing.Backend.dto.LogRequestDTO;
 import Landing.Backend.dto.LogResponseDTO;
@@ -22,11 +17,14 @@ import Landing.Backend.service.LandingProjectService;
 import Landing.Backend.service.LogService;
 import Landing.Backend.service.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/logs")
 @RequiredArgsConstructor
@@ -38,9 +36,12 @@ public class LogController {
     private final LandingProjectService landingProjectService;
 
     @PostMapping
-    @Operation(summary = "Registrar evento", description = "Almacena un nuevo log de auditoría asegurando la identidad del usuario y la IP")
-    public ResponseEntity<LogResponseDTO> createLog(@Valid @RequestBody LogRequestDTO requestDTO) {
-        
+    @Operation(summary = "Registrar evento manualmente",
+               description = "Permite registrar un log de auditoría desde contextos externos")
+    public ResponseEntity<LogResponseDTO> createLog(
+            @Valid @RequestBody LogRequestDTO requestDTO,
+            HttpServletRequest httpRequest) {
+
         User user = userService.findById(requestDTO.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado para el log"));
 
@@ -48,47 +49,68 @@ public class LogController {
         if (requestDTO.getProjectId() != null) {
             project = landingProjectService.getProjectEntityById(requestDTO.getProjectId());
         }
-        
-        Log log = new Log();
-        log.setUser(user);
-        log.setProject(project);
-        log.setEventType(requestDTO.getEventType());
-        log.setIpClient(requestDTO.getIpClient());
 
-        Log createdLog = logService.recordLog(log);
+        String ipClient = (requestDTO.getIpClient() != null && !requestDTO.getIpClient().isBlank())
+                ? requestDTO.getIpClient()
+                : extractClientIp(httpRequest);
+
+        Log logEntry = Log.builder()
+                .user(user)
+                .project(project)
+                .eventType(requestDTO.getEventType())
+                .ipClient(ipClient)
+                .build();
+
+        Log createdLog = logService.recordLog(logEntry);
+        log.info("[LOG CONTROLLER] Log creado manualmente: ID {}", createdLog.getLogId());
+
         return new ResponseEntity<>(convertToResponseDTO(createdLog), HttpStatus.CREATED);
     }
 
     @GetMapping
-    @Operation(summary = "Listar historial de eventos", description = "Obtiene todos los logs registrados en la plataforma para fines de auditoría")
+    @Operation(summary = "Listar historial de eventos",
+               description = "Obtiene todos los logs registrados, ordenados del más reciente al más antiguo")
     public ResponseEntity<List<LogResponseDTO>> getAllLogs() {
         List<LogResponseDTO> logs = logService.getAllLogs().stream()
                 .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
+        log.debug("[LOG CONTROLLER] GET /logs → {} registros", logs.size());
         return ResponseEntity.ok(logs);
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Consultar evento específico", description = "Obtiene los detalles detallados de un log mediante su identificador único")
+    @Operation(summary = "Consultar evento específico")
     public ResponseEntity<LogResponseDTO> getLogById(@PathVariable Integer id) {
         return logService.getLogById(id)
-                .map(log -> ResponseEntity.ok(convertToResponseDTO(log)))
+                .map(logEntry -> ResponseEntity.ok(convertToResponseDTO(logEntry)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    private LogResponseDTO convertToResponseDTO(Log log) {
+    private LogResponseDTO convertToResponseDTO(Log logEntry) {
         LogResponseDTO dto = new LogResponseDTO();
-        dto.setLogId(log.getLogId());
-        dto.setUserId(log.getUser().getUserId());
-        dto.setUserEmail(log.getUser().getEmail()); 
-        
-        if (log.getProject() != null) {
-            dto.setProjectId(log.getProject().getProjectId());
+        dto.setLogId(logEntry.getLogId());
+        dto.setUserId(logEntry.getUser().getUserId());
+        dto.setUserEmail(logEntry.getUser().getEmail());
+
+        if (logEntry.getProject() != null) {
+            dto.setProjectId(logEntry.getProject().getProjectId());
         }
-        
-        dto.setEventType(log.getEventType());
-        dto.setIpClient(log.getIpClient());
-        dto.setEventAt(log.getEventAt());
+
+        dto.setEventType(logEntry.getEventType());
+        dto.setIpClient(logEntry.getIpClient());
+        dto.setEventAt(logEntry.getEventAt());
         return dto;
+    }
+
+    private String extractClientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp.trim();
+        }
+        return request.getRemoteAddr();
     }
 }

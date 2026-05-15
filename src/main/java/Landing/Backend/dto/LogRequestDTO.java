@@ -6,15 +6,14 @@ import lombok.Data;
 
 @Data
 public class LogRequestDTO {
-    
+
     @NotNull(message = "El ID del usuario es obligatorio")
     private Integer userId;
-    
+
     private Integer projectId; // Puede ser null
-    
-    @NotBlank(message = "El tipo de evento no puede estar vacio")
+
+    @NotBlank(message = "El tipo de evento no puede estar vacío")
     private String eventType;
-    
-    @NotBlank(message = "La direccion IP del cliente es obligatorio")
+
     private String ipClient;
 }
