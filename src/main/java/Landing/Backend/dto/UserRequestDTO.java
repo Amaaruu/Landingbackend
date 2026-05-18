@@ -24,8 +24,4 @@ public class UserRequestDTO {
     @NotBlank(message = "La contraseña es obligatoria")
     @Size(min = 8, max = 64, message = "La contraseña debe tener entre 8 y 64 caracteres")
     private String password;
-
-    @NotBlank(message = "El rol es obligatorio")
-    @Pattern(regexp = "^(admin|user)$", message = "El rol solo puede ser 'admin' o 'user'")
-    private String role;
 }
