@@ -1,4 +1,3 @@
-// src/main/java/Landing/Backend/service/LandingProjectService.java
 package Landing.Backend.service;
 
 import Landing.Backend.dto.LandingProjectRequestDTO;
@@ -19,6 +18,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.text.Normalizer;
 
 @Service
 @RequiredArgsConstructor
@@ -69,12 +70,12 @@ public class LandingProjectService {
     }
 
     public LandingProjectResponseDTO createProject(LandingProjectRequestDTO request) {
-        LandingProject project  = saveInitialProject(request);
+        LandingProject project   = saveInitialProject(request);
         Integer        projectId = project.getProjectId();
         String         userPlan  = getUserPlanSafe(request.getTransactionId());
         String         userEmail = getUserEmailSafe(projectId);
 
-        System.out.println("Proyecto #" + projectId + " | Plan: " + userPlan);
+        System.out.println("[LandingProjectService] Proyecto #" + projectId + " | Plan normalizado: " + userPlan);
         aiGenerationTask.execute(projectId, userPlan, userEmail);
 
         return getProjectById(projectId);
@@ -158,7 +159,34 @@ public class LandingProjectService {
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Transacción no encontrada con ID: " + transactionId));
-        return transaction.getPlan().getName().toUpperCase();
+
+        String rawName = transaction.getPlan().getName();
+        return normalizePlanName(rawName);
+    }
+
+    private String normalizePlanName(String rawName) {
+        if (rawName == null || rawName.isBlank()) {
+            System.err.println("[LandingProjectService] Plan nulo o vacío — usando BASIC como fallback");
+            return "BASIC";
+        }
+
+        // Eliminar diacríticos (tildes) y convertir a mayúsculas
+        String normalized = Normalizer
+                .normalize(rawName.trim(), Normalizer.Form.NFD)
+                .replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
+                .toUpperCase();
+
+        System.out.println("[LandingProjectService] Plan raw: \"" + rawName + "\" → normalizado: \"" + normalized + "\"");
+
+        return switch (normalized) {
+            case "BASICO", "BASIC"          -> "BASIC";
+            case "INTERMEDIO", "INTERMEDIATE" -> "INTERMEDIATE";
+            case "PREMIUM"                  -> "PREMIUM";
+            default -> {
+                System.err.println("[LandingProjectService] Plan desconocido: \"" + normalized + "\" — usando BASIC como fallback");
+                yield "BASIC";
+            }
+        };
     }
 
     @Transactional(readOnly = true)
