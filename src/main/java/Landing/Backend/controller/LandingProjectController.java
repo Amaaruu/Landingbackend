@@ -24,65 +24,48 @@ public class LandingProjectController {
     private final LandingProjectService projectService;
 
     @PostMapping
-    @Operation(summary = "Crear proyecto", description = "Inicia la generación de una landing page")
+    @Operation(summary = "Crear proyecto")
     public ResponseEntity<LandingProjectResponseDTO> createProject(
             @RequestBody LandingProjectRequestDTO request) {
         return new ResponseEntity<>(projectService.createProject(request), HttpStatus.CREATED);
     }
 
     @GetMapping
-    @Operation(summary = "Listar proyectos", description = "Admin: todos. Usuario: solo los suyos.")
+    @Operation(summary = "Listar proyectos — admin: todos | usuario: solo los suyos")
     public ResponseEntity<Page<LandingProjectResponseDTO>> getProjects(
-            Pageable pageable,
-            Authentication authentication) {
-
+            Pageable pageable, Authentication authentication) {
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-
-        if (isAdmin) {
-            return ResponseEntity.ok(projectService.getAllProjects(pageable));
-        }
+        if (isAdmin) return ResponseEntity.ok(projectService.getAllProjects(pageable));
         return ResponseEntity.ok(projectService.getProjectsByAuthenticatedUser(pageable));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Obtener proyecto por ID")
     public ResponseEntity<LandingProjectResponseDTO> getProjectById(
-            @PathVariable Integer id,
-            Authentication authentication) {
-
+            @PathVariable Integer id, Authentication authentication) {
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-
-        if (isAdmin) {
-            return ResponseEntity.ok(projectService.getProjectById(id));
-        }
+        if (isAdmin) return ResponseEntity.ok(projectService.getProjectById(id));
         return ResponseEntity.ok(projectService.getProjectByIdForUser(id));
     }
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Actualizar estado del proyecto (admin)")
+    @Operation(summary = "Actualizar estado (solo admin)")
     public ResponseEntity<LandingProjectResponseDTO> updateProjectStatus(
-            @PathVariable Integer id,
-            @RequestParam String status) {
+            @PathVariable Integer id, @RequestParam String status) {
         return ResponseEntity.ok(projectService.updateProjectStatus(id, status));
     }
 
     @DeleteMapping("/{id}")
     @Operation(summary = "Eliminar proyecto")
     public ResponseEntity<Void> deleteProject(
-            @PathVariable Integer id,
-            Authentication authentication) {
-
+            @PathVariable Integer id, Authentication authentication) {
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-
-        if (isAdmin) {
-            projectService.deleteProject(id);
-        } else {
-            projectService.deleteProjectForUser(id);
-        }
+        if (isAdmin) projectService.deleteProject(id);
+        else         projectService.deleteProjectForUser(id);
         return ResponseEntity.noContent().build();
     }
 }
