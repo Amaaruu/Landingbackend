@@ -22,6 +22,6 @@ services:
       - key: DB_PASSWORD
         sync: false
       - key: PYTHON_API_URL
-        value: "https://wlsuitepythonapi.onrender.com"
+        value: "https://wlsuite-python-api.onrender.com"
       - key: JWT_SECRET_KEY
         generateValue: true
