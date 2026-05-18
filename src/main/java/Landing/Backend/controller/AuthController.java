@@ -1,3 +1,4 @@
+// src/main/java/Landing/Backend/controller/AuthController.java
 package Landing.Backend.controller;
 
 import Landing.Backend.dto.AuthResponseDTO;
@@ -32,12 +33,12 @@ import java.util.Optional;
 @Tag(name = "Autenticación", description = "Endpoints para Login y Registro de usuarios")
 public class AuthController {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
+    private final UserRepository      userRepository;
+    private final PasswordEncoder     passwordEncoder;
+    private final JwtService          jwtService;
     private final AuthenticationManager authenticationManager;
-    private final EmailService emailService;
-    private final LogService logService;
+    private final EmailService        emailService;
+    private final LogService          logService;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponseDTO> register(
@@ -56,7 +57,7 @@ public class AuthController {
             user.setPassword(passwordEncoder.encode(request.getPassword()));
             user.setName(request.getName());
             user.setLastName(request.getLastname());
-            user.setRole(request.getRole());
+            user.setRole("user"); // siempre "user", nunca desde el cliente
             userRepository.save(user);
         } else {
             user = User.builder()
@@ -64,16 +65,14 @@ public class AuthController {
                     .lastName(request.getLastname())
                     .email(request.getEmail())
                     .password(passwordEncoder.encode(request.getPassword()))
-                    .role(request.getRole())
+                    .role("user") // hardcodeado: el cliente no puede elegir su rol
                     .active(true)
                     .build();
             userRepository.save(user);
         }
 
         emailService.sendWelcomeEmail(user.getEmail(), user.getName());
-
-        String clientIp = extractClientIp(httpRequest);
-        logService.recordEvent(user, null, "USER_REGISTERED", clientIp);
+        logService.recordEvent(user, null, "USER_REGISTERED", extractClientIp(httpRequest));
 
         var userDetails = org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
@@ -82,7 +81,7 @@ public class AuthController {
                 .build();
 
         Map<String, Object> extraClaims = new HashMap<>();
-        extraClaims.put("role", user.getRole());
+        extraClaims.put("role", user.getRole()); // el rol va dentro del JWT, no en el body HTTP
 
         String jwtToken = jwtService.generateToken(extraClaims, userDetails);
 
@@ -90,7 +89,7 @@ public class AuthController {
                 .token(jwtToken)
                 .message("Registro exitoso")
                 .name(user.getName())
-                .userId(user.getUserId())
+                // userId eliminado de la respuesta
                 .build());
     }
 
@@ -100,14 +99,13 @@ public class AuthController {
             HttpServletRequest httpRequest) {
 
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
         );
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BusinessLogicException("Usuario no encontrado", HttpStatus.NOT_FOUND));
 
-        String clientIp = extractClientIp(httpRequest);
-        logService.recordEvent(user, null, "USER_LOGIN", clientIp);
+        logService.recordEvent(user, null, "USER_LOGIN", extractClientIp(httpRequest));
 
         var userDetails = org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
@@ -124,19 +122,15 @@ public class AuthController {
                 .token(jwtToken)
                 .message("Login exitoso")
                 .name(user.getName())
-                .userId(user.getUserId())
+                // userId eliminado de la respuesta
                 .build());
     }
 
     private String extractClientIp(HttpServletRequest request) {
         String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
+        if (forwarded != null && !forwarded.isBlank()) return forwarded.split(",")[0].trim();
         String realIp = request.getHeader("X-Real-IP");
-        if (realIp != null && !realIp.isBlank()) {
-            return realIp.trim();
-        }
+        if (realIp != null && !realIp.isBlank()) return realIp.trim();
         return request.getRemoteAddr();
     }
 }

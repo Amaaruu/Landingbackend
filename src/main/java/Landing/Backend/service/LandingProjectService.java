@@ -29,19 +29,18 @@ public class LandingProjectService {
     private final UserRepository           userRepository;
     private final AiGenerationTask         aiGenerationTask;
 
-    private String getAuthenticatedEmail() {
+    // ── Helper: usuario autenticado desde JWT ────────────────────────────────
+
+    private User getAuthenticatedUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
             throw new BusinessLogicException("No autenticado", HttpStatus.UNAUTHORIZED);
         }
-        return auth.getName();
+        return userRepository.findByEmail(auth.getName())
+                .orElseThrow(() -> new BusinessLogicException("Usuario no encontrado", HttpStatus.UNAUTHORIZED));
     }
 
-    private User getAuthenticatedUser() {
-        String email = getAuthenticatedEmail();
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new BusinessLogicException("Usuario autenticado no encontrado", HttpStatus.UNAUTHORIZED));
-    }
+    // ── Creación ─────────────────────────────────────────────────────────────
 
     @Transactional
     public LandingProject saveInitialProject(LandingProjectRequestDTO request) {
@@ -76,20 +75,22 @@ public class LandingProjectService {
         String         userEmail = getUserEmailSafe(projectId);
 
         System.out.println("Proyecto #" + projectId + " | Plan: " + userPlan);
-
         aiGenerationTask.execute(projectId, userPlan, userEmail);
 
         return getProjectById(projectId);
     }
 
+    // ── Consultas para ADMIN ──────────────────────────────────────────────────
+
     public Page<LandingProjectResponseDTO> getAllProjects(Pageable pageable) {
         return projectRepository.findAll(pageable).map(this::mapToResponse);
     }
 
+    // ── Consultas para USUARIO (filtradas por propietario) ───────────────────
+
     public Page<LandingProjectResponseDTO> getProjectsByAuthenticatedUser(Pageable pageable) {
         User user = getAuthenticatedUser();
-        return projectRepository.findByUserId(user.getUserId(), pageable)
-                .map(this::mapToResponse);
+        return projectRepository.findByUserId(user.getUserId(), pageable).map(this::mapToResponse);
     }
 
     public LandingProjectResponseDTO getProjectByIdForUser(Integer id) {
@@ -98,33 +99,31 @@ public class LandingProjectService {
                 .findByProjectIdAndUserId(id, user.getUserId())
                 .orElseThrow(() -> {
                     boolean exists = projectRepository.existsById(id);
-                    if (exists) {
-                        return new BusinessLogicException(
-                                "No tienes permiso para acceder a este proyecto", HttpStatus.FORBIDDEN);
-                    }
+                    if (exists) return new BusinessLogicException(
+                            "No tienes permiso para acceder a este proyecto", HttpStatus.FORBIDDEN);
                     return new ResourceNotFoundException("Proyecto no encontrado con ID: " + id);
                 });
         return mapToResponse(project);
     }
 
+    // ── Consulta interna sin restricción de usuario ───────────────────────────
+
     public LandingProjectResponseDTO getProjectById(Integer id) {
-        LandingProject project = projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Proyecto no encontrado con ID: " + id));
-        return mapToResponse(project);
+        return mapToResponse(projectRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado con ID: " + id)));
     }
 
     public LandingProject getProjectEntityById(Integer id) {
         return projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Proyecto no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado con ID: " + id));
     }
+
+    // ── Mutaciones ────────────────────────────────────────────────────────────
 
     @Transactional
     public LandingProjectResponseDTO updateProjectStatus(Integer id, String status) {
         LandingProject project = projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Proyecto no encontrado con ID: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado con ID: " + id));
         project.setStatus(status);
         projectRepository.save(project);
         return mapToResponse(project);
@@ -132,10 +131,10 @@ public class LandingProjectService {
 
     @Transactional
     public void deleteProject(Integer id) {
-        LandingProject project = projectRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Proyecto no encontrado con ID: " + id));
-        projectRepository.delete(project);
+        projectRepository.delete(
+            projectRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado con ID: " + id))
+        );
     }
 
     @Transactional
@@ -145,14 +144,14 @@ public class LandingProjectService {
                 .findByProjectIdAndUserId(id, user.getUserId())
                 .orElseThrow(() -> {
                     boolean exists = projectRepository.existsById(id);
-                    if (exists) {
-                        return new BusinessLogicException(
-                                "No tienes permiso para eliminar este proyecto", HttpStatus.FORBIDDEN);
-                    }
+                    if (exists) return new BusinessLogicException(
+                            "No tienes permiso para eliminar este proyecto", HttpStatus.FORBIDDEN);
                     return new ResourceNotFoundException("Proyecto no encontrado con ID: " + id);
                 });
         projectRepository.delete(project);
     }
+
+    // ── Helpers internos ─────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
     public String getUserPlanSafe(Integer transactionId) {
@@ -165,12 +164,21 @@ public class LandingProjectService {
     @Transactional(readOnly = true)
     String getUserEmailSafe(Integer projectId) {
         LandingProject project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Proyecto no encontrado: " + projectId));
+                .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado: " + projectId));
         return project.getTransaction().getUser().getEmail();
     }
 
+    // ── Mapper ────────────────────────────────────────────────────────────────
+
     private LandingProjectResponseDTO mapToResponse(LandingProject project) {
+        String ownerName  = null;
+        String ownerEmail = null;
+        try {
+            User owner = project.getTransaction().getUser();
+            ownerName  = owner.getName() + (owner.getLastName() != null ? " " + owner.getLastName() : "");
+            ownerEmail = owner.getEmail();
+        } catch (Exception ignored) {}
+
         return LandingProjectResponseDTO.builder()
                 .projectId(project.getProjectId())
                 .projectName(project.getProjectName())
@@ -189,6 +197,8 @@ public class LandingProjectService {
                 .brandStage(project.getBrandStage())
                 .valueProposition(project.getValueProposition())
                 .formalityLevel(project.getFormalityLevel())
+                .ownerName(ownerName)
+                .ownerEmail(ownerEmail)
                 .build();
     }
 }
