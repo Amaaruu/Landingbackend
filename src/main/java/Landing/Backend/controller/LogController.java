@@ -89,8 +89,14 @@ public class LogController {
     private LogResponseDTO convertToResponseDTO(Log logEntry) {
         LogResponseDTO dto = new LogResponseDTO();
         dto.setLogId(logEntry.getLogId());
-        dto.setUserId(logEntry.getUser().getUserId());
-        dto.setUserEmail(logEntry.getUser().getEmail());
+
+        if (logEntry.getUser() != null) {
+            dto.setUserId(logEntry.getUser().getUserId());
+            dto.setUserEmail(logEntry.getUser().getEmail());
+        } else {
+            dto.setUserId(null);
+            dto.setUserEmail("Usuario eliminado");
+        }
 
         if (logEntry.getProject() != null) {
             dto.setProjectId(logEntry.getProject().getProjectId());
