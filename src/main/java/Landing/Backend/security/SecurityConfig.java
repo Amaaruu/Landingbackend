@@ -1,4 +1,3 @@
-// src/main/java/Landing/Backend/security/SecurityConfig.java
 package Landing.Backend.security;
 
 import lombok.RequiredArgsConstructor;
@@ -36,6 +35,7 @@ public class SecurityConfig {
                 .requestMatchers(
                     "/api/v1/auth/**",
                     "/api/v1/plans",
+                    "/api/v1/contact",
                     "/api/v1/health",
                     "/landings/**",
                     "/swagger-ui/**",
