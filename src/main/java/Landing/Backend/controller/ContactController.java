@@ -2,22 +2,26 @@ package Landing.Backend.controller;
 
 import Landing.Backend.dto.ContactRequestDTO;
 import Landing.Backend.service.EmailService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/contact")
+@RequiredArgsConstructor
 public class ContactController {
 
-    @Autowired
-    private EmailService emailService;
+    private final EmailService emailService;
 
     @PostMapping
     public ResponseEntity<?> receiveContactForm(@RequestBody ContactRequestDTO request) {
-        // Llama al servicio asíncrono
-        emailService.sendContactEmail(request.getName(), request.getEmail(), request.getMessage());
+        emailService.sendContactEmail(
+            request.getName(),
+            request.getEmail(),
+            request.getMessage()
+        );
         return ResponseEntity.ok(Map.of("message", "Mensaje enviado con éxito"));
     }
 }
