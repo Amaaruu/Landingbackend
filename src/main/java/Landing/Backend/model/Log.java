@@ -1,6 +1,7 @@
 package Landing.Backend.model;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -41,6 +42,6 @@ public class Log {
 
     @PrePersist
     protected void onCreate() {
-        this.eventAt = LocalDateTime.now();
+        this.eventAt = LocalDateTime.now(ZoneId.of("UTC"));
     }
 }

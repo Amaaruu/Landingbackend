@@ -1,4 +1,3 @@
-// src/main/java/Landing/Backend/controller/AuthController.java
 package Landing.Backend.controller;
 
 import Landing.Backend.dto.AuthResponseDTO;
@@ -11,7 +10,6 @@ import Landing.Backend.security.JwtService;
 import Landing.Backend.service.EmailService;
 import Landing.Backend.service.LogService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -26,50 +24,39 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 @Tag(name = "Autenticación", description = "Endpoints para Login y Registro de usuarios")
 public class AuthController {
 
-    private final UserRepository      userRepository;
-    private final PasswordEncoder     passwordEncoder;
-    private final JwtService          jwtService;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
-    private final EmailService        emailService;
-    private final LogService          logService;
+    private final EmailService emailService;
+    private final LogService logService;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponseDTO> register(
             @Valid @RequestBody UserRequestDTO request,
             HttpServletRequest httpRequest) {
 
-        Optional<User> existingUser = userRepository.findByEmail(request.getEmail());
-        User user;
+        Optional<User> existingUser = userRepository.findByEmailIncludingInactive(request.getEmail());
 
         if (existingUser.isPresent()) {
-            user = existingUser.get();
-            if (user.getActive()) {
-                throw new BusinessLogicException("El correo ya está registrado", HttpStatus.CONFLICT);
-            }
-            user.setActive(true);
-            user.setPassword(passwordEncoder.encode(request.getPassword()));
-            user.setName(request.getName());
-            user.setLastName(request.getLastname());
-            user.setRole("user"); // siempre "user", nunca desde el cliente
-            userRepository.save(user);
-        } else {
-            user = User.builder()
-                    .name(request.getName())
-                    .lastName(request.getLastname())
-                    .email(request.getEmail())
-                    .password(passwordEncoder.encode(request.getPassword()))
-                    .role("user") // hardcodeado: el cliente no puede elegir su rol
-                    .active(true)
-                    .build();
-            userRepository.save(user);
+            throw new BusinessLogicException("El correo ya está registrado", HttpStatus.CONFLICT);
         }
+
+        User user = User.builder()
+                .name(request.getName())
+                .lastName(request.getLastname())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .role("user")
+                .active(true)
+                .build();
+        userRepository.save(user);
 
         emailService.sendWelcomeEmail(user.getEmail(), user.getName());
         logService.recordEvent(user, null, "USER_REGISTERED", extractClientIp(httpRequest));
@@ -77,11 +64,11 @@ public class AuthController {
         var userDetails = org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
                 .password(user.getPassword())
-                .authorities(user.getRole())
+                .roles(user.getRole().toUpperCase())
                 .build();
 
         Map<String, Object> extraClaims = new HashMap<>();
-        extraClaims.put("role", user.getRole()); // el rol va dentro del JWT, no en el body HTTP
+        extraClaims.put("role", user.getRole());
 
         String jwtToken = jwtService.generateToken(extraClaims, userDetails);
 
@@ -89,7 +76,6 @@ public class AuthController {
                 .token(jwtToken)
                 .message("Registro exitoso")
                 .name(user.getName())
-                // userId eliminado de la respuesta
                 .build());
     }
 
@@ -110,7 +96,7 @@ public class AuthController {
         var userDetails = org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
                 .password(user.getPassword())
-                .authorities(user.getRole())
+                .roles(user.getRole().toUpperCase())
                 .build();
 
         Map<String, Object> extraClaims = new HashMap<>();
@@ -122,7 +108,6 @@ public class AuthController {
                 .token(jwtToken)
                 .message("Login exitoso")
                 .name(user.getName())
-                // userId eliminado de la respuesta
                 .build());
     }
 

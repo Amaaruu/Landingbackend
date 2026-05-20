@@ -1,6 +1,7 @@
 package Landing.Backend.model;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Map;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.SQLDelete;
@@ -98,12 +99,12 @@ public class LandingProject {
 
     @PrePersist
     protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now(ZoneId.of("UTC"));
+        this.updatedAt = LocalDateTime.now(ZoneId.of("UTC"));
     }
 
     @PreUpdate
     protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now(ZoneId.of("UTC"));
     }
 }

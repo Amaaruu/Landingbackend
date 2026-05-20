@@ -1,4 +1,3 @@
-// src/main/java/Landing/Backend/service/TransactionService.java
 package Landing.Backend.service;
 
 import Landing.Backend.dto.TransactionRequestDTO;
@@ -17,6 +16,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -26,8 +27,8 @@ import java.util.Optional;
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
-    private final UserRepository        userRepository;
-    private final DesignPlanRepository  designPlanRepository;
+    private final UserRepository userRepository;
+    private final DesignPlanRepository designPlanRepository;
 
     private User getAuthenticatedUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -48,7 +49,8 @@ public class TransactionService {
         transaction.setUser(user);
         transaction.setPlan(plan);
         transaction.setPaymentMethod(request.getPaymentMethod());
-        transaction.setStatus(request.getStatus());
+        transaction.setStatus("PENDIENTE");
+        transaction.setPaidAt(LocalDateTime.now(ZoneId.of("UTC")));
 
         return transactionRepository.save(transaction);
     }
