@@ -10,9 +10,7 @@ public class TransactionRequestDTO {
     @NotNull(message = "El ID del plan de diseño es obligatorio")
     private Integer planId;
     
-    @NotBlank(message = "El metodo d pago es obligatorio")
+    @NotBlank(message = "El metodo de pago es obligatorio")
     private String paymentMethod;
     
-    @NotBlank(message = "El estado de la transaccion es obligatorio")
-    private String status;
 }
