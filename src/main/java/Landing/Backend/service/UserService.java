@@ -23,7 +23,7 @@ public class UserService {
     }
 
     public List<User> findAllUsers() {
-        return userRepository.findAll();
+        return userRepository.findAllActiveUsers();
     }
 
     public Optional<User> findById(Integer id) {
@@ -36,17 +36,14 @@ public class UserService {
         userRepository.delete(user);
     }
 
-    /** Actualiza nombre y apellido únicamente. No toca el rol. */
     public User updateUser(Integer id, User userDetails) {
         return userRepository.findById(id).map(user -> {
             if (userDetails.getName() != null)     user.setName(userDetails.getName());
             if (userDetails.getLastName() != null) user.setLastName(userDetails.getLastName());
-            // rol NO se toca aquí: usar updateUserRole()
             return userRepository.save(user);
         }).orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con ID: " + id));
     }
 
-    /** Actualiza el rol únicamente. Endpoint exclusivo para admins. */
     public User updateUserRole(Integer id, String newRole) {
         return userRepository.findById(id).map(user -> {
             user.setRole(newRole);

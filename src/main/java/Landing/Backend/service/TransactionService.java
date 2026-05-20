@@ -26,7 +26,7 @@ import java.util.Optional;
 public class TransactionService {
 
     private final TransactionRepository transactionRepository;
-    private final UserRepository userRepository;
+    private final UserRepository        userRepository;
     private final DesignPlanRepository  designPlanRepository;
 
     private User getAuthenticatedUser() {
@@ -39,11 +39,10 @@ public class TransactionService {
     }
 
     public Transaction createTransaction(TransactionRequestDTO request) {
-        // El usuario viene del JWT, nunca del body del cliente
         User user = getAuthenticatedUser();
 
         DesignPlan plan = designPlanRepository.findById(request.getPlanId())
-                .orElseThrow(() -> new ResourceNotFoundException("Plan no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Plan no encontrado con ID: " + request.getPlanId()));
 
         Transaction transaction = new Transaction();
         transaction.setUser(user);
@@ -52,6 +51,11 @@ public class TransactionService {
         transaction.setStatus(request.getStatus());
 
         return transactionRepository.save(transaction);
+    }
+    
+    public List<Transaction> getTransactionsByAuthenticatedUser() {
+        User user = getAuthenticatedUser();
+        return transactionRepository.findByUser_UserId(user.getUserId());
     }
 
     public List<Transaction> getTransactionsByUserId(Integer userId) {
@@ -66,6 +70,6 @@ public class TransactionService {
         return transactionRepository.findById(id).map(t -> {
             t.setStatus(newStatus);
             return transactionRepository.save(t);
-        }).orElseThrow(() -> new ResourceNotFoundException("Transacción no encontrada"));
+        }).orElseThrow(() -> new ResourceNotFoundException("Transacción no encontrada con ID: " + id));
     }
 }
