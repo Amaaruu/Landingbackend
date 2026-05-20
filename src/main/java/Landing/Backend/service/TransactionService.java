@@ -1,4 +1,3 @@
-// src/main/java/Landing/Backend/service/TransactionService.java
 package Landing.Backend.service;
 
 import Landing.Backend.dto.TransactionRequestDTO;
@@ -17,6 +16,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,7 +28,7 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
-    private final DesignPlanRepository  designPlanRepository;
+    private final DesignPlanRepository designPlanRepository;
 
     private User getAuthenticatedUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -39,19 +40,24 @@ public class TransactionService {
     }
 
     public Transaction createTransaction(TransactionRequestDTO request) {
-        // El usuario viene del JWT, nunca del body del cliente
         User user = getAuthenticatedUser();
 
         DesignPlan plan = designPlanRepository.findById(request.getPlanId())
-                .orElseThrow(() -> new ResourceNotFoundException("Plan no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Plan no encontrado con ID: " + request.getPlanId()));
 
         Transaction transaction = new Transaction();
         transaction.setUser(user);
         transaction.setPlan(plan);
         transaction.setPaymentMethod(request.getPaymentMethod());
-        transaction.setStatus(request.getStatus());
+        transaction.setStatus("PENDIENTE");
+        transaction.setPaidAt(LocalDateTime.now(ZoneId.of("UTC")));
 
         return transactionRepository.save(transaction);
+    }
+    
+    public List<Transaction> getTransactionsByAuthenticatedUser() {
+        User user = getAuthenticatedUser();
+        return transactionRepository.findByUser_UserId(user.getUserId());
     }
 
     public List<Transaction> getTransactionsByUserId(Integer userId) {
@@ -66,6 +72,6 @@ public class TransactionService {
         return transactionRepository.findById(id).map(t -> {
             t.setStatus(newStatus);
             return transactionRepository.save(t);
-        }).orElseThrow(() -> new ResourceNotFoundException("Transacción no encontrada"));
+        }).orElseThrow(() -> new ResourceNotFoundException("Transacción no encontrada con ID: " + id));
     }
 }

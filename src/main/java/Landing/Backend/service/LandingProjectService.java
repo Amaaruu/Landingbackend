@@ -26,11 +26,9 @@ import java.text.Normalizer;
 public class LandingProjectService {
 
     private final LandingProjectRepository projectRepository;
-    private final TransactionRepository    transactionRepository;
-    private final UserRepository           userRepository;
-    private final AiGenerationTask         aiGenerationTask;
-
-    // ── Helper: usuario autenticado desde JWT ────────────────────────────────
+    private final TransactionRepository transactionRepository;
+    private final UserRepository userRepository;
+    private final AiGenerationTask aiGenerationTask;
 
     private User getAuthenticatedUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -41,13 +39,15 @@ public class LandingProjectService {
                 .orElseThrow(() -> new BusinessLogicException("Usuario no encontrado", HttpStatus.UNAUTHORIZED));
     }
 
-    // ── Creación ─────────────────────────────────────────────────────────────
-
     @Transactional
     public LandingProject saveInitialProject(LandingProjectRequestDTO request) {
         Transaction transaction = transactionRepository.findById(request.getTransactionId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Transacción no encontrada con ID: " + request.getTransactionId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Transacción no encontrada con ID: " + request.getTransactionId()));
+
+        User currentUser = getAuthenticatedUser();
+        if (!transaction.getUser().getUserId().equals(currentUser.getUserId())) {
+            throw new BusinessLogicException("No tienes permiso para usar esta transacción", HttpStatus.FORBIDDEN);
+        }
 
         LandingProject project = LandingProject.builder()
                 .transaction(transaction)
@@ -70,24 +70,19 @@ public class LandingProjectService {
     }
 
     public LandingProjectResponseDTO createProject(LandingProjectRequestDTO request) {
-        LandingProject project   = saveInitialProject(request);
-        Integer        projectId = project.getProjectId();
-        String         userPlan  = getUserPlanSafe(request.getTransactionId());
-        String         userEmail = getUserEmailSafe(projectId);
+        LandingProject project = saveInitialProject(request);
+        Integer projectId = project.getProjectId();
+        String userPlan = getUserPlanSafe(request.getTransactionId());
+        String userEmail = getUserEmailSafe(projectId);
 
-        System.out.println("[LandingProjectService] Proyecto #" + projectId + " | Plan normalizado: " + userPlan);
         aiGenerationTask.execute(projectId, userPlan, userEmail);
 
         return getProjectById(projectId);
     }
 
-    // ── Consultas para ADMIN ──────────────────────────────────────────────────
-
     public Page<LandingProjectResponseDTO> getAllProjects(Pageable pageable) {
         return projectRepository.findAll(pageable).map(this::mapToResponse);
     }
-
-    // ── Consultas para USUARIO (filtradas por propietario) ───────────────────
 
     public Page<LandingProjectResponseDTO> getProjectsByAuthenticatedUser(Pageable pageable) {
         User user = getAuthenticatedUser();
@@ -100,14 +95,11 @@ public class LandingProjectService {
                 .findByProjectIdAndUserId(id, user.getUserId())
                 .orElseThrow(() -> {
                     boolean exists = projectRepository.existsById(id);
-                    if (exists) return new BusinessLogicException(
-                            "No tienes permiso para acceder a este proyecto", HttpStatus.FORBIDDEN);
+                    if (exists) return new BusinessLogicException("No tienes permiso para acceder a este proyecto", HttpStatus.FORBIDDEN);
                     return new ResourceNotFoundException("Proyecto no encontrado con ID: " + id);
                 });
         return mapToResponse(project);
     }
-
-    // ── Consulta interna sin restricción de usuario ───────────────────────────
 
     public LandingProjectResponseDTO getProjectById(Integer id) {
         return mapToResponse(projectRepository.findById(id)
@@ -118,8 +110,6 @@ public class LandingProjectService {
         return projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Proyecto no encontrado con ID: " + id));
     }
-
-    // ── Mutaciones ────────────────────────────────────────────────────────────
 
     @Transactional
     public LandingProjectResponseDTO updateProjectStatus(Integer id, String status) {
@@ -145,47 +135,33 @@ public class LandingProjectService {
                 .findByProjectIdAndUserId(id, user.getUserId())
                 .orElseThrow(() -> {
                     boolean exists = projectRepository.existsById(id);
-                    if (exists) return new BusinessLogicException(
-                            "No tienes permiso para eliminar este proyecto", HttpStatus.FORBIDDEN);
+                    if (exists) return new BusinessLogicException("No tienes permiso para eliminar este proyecto", HttpStatus.FORBIDDEN);
                     return new ResourceNotFoundException("Proyecto no encontrado con ID: " + id);
                 });
         projectRepository.delete(project);
     }
 
-    // ── Helpers internos ─────────────────────────────────────────────────────
-
     @Transactional(readOnly = true)
     public String getUserPlanSafe(Integer transactionId) {
         Transaction transaction = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Transacción no encontrada con ID: " + transactionId));
-
-        String rawName = transaction.getPlan().getName();
-        return normalizePlanName(rawName);
+                .orElseThrow(() -> new ResourceNotFoundException("Transacción no encontrada con ID: " + transactionId));
+        return normalizePlanName(transaction.getPlan().getName());
     }
 
     private String normalizePlanName(String rawName) {
         if (rawName == null || rawName.isBlank()) {
-            System.err.println("[LandingProjectService] Plan nulo o vacío — usando BASIC como fallback");
             return "BASIC";
         }
-
-        // Eliminar diacríticos (tildes) y convertir a mayúsculas
         String normalized = Normalizer
                 .normalize(rawName.trim(), Normalizer.Form.NFD)
                 .replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
                 .toUpperCase();
 
-        System.out.println("[LandingProjectService] Plan raw: \"" + rawName + "\" → normalizado: \"" + normalized + "\"");
-
         return switch (normalized) {
-            case "BASICO", "BASIC"          -> "BASIC";
+            case "BASICO", "BASIC" -> "BASIC";
             case "INTERMEDIO", "INTERMEDIATE" -> "INTERMEDIATE";
-            case "PREMIUM"                  -> "PREMIUM";
-            default -> {
-                System.err.println("[LandingProjectService] Plan desconocido: \"" + normalized + "\" — usando BASIC como fallback");
-                yield "BASIC";
-            }
+            case "PREMIUM" -> "PREMIUM";
+            default -> "BASIC";
         };
     }
 
@@ -196,14 +172,12 @@ public class LandingProjectService {
         return project.getTransaction().getUser().getEmail();
     }
 
-    // ── Mapper ────────────────────────────────────────────────────────────────
-
     private LandingProjectResponseDTO mapToResponse(LandingProject project) {
-        String ownerName  = null;
+        String ownerName = null;
         String ownerEmail = null;
         try {
             User owner = project.getTransaction().getUser();
-            ownerName  = owner.getName() + (owner.getLastName() != null ? " " + owner.getLastName() : "");
+            ownerName = owner.getName() + (owner.getLastName() != null ? " " + owner.getLastName() : "");
             ownerEmail = owner.getEmail();
         } catch (Exception ignored) {}
 

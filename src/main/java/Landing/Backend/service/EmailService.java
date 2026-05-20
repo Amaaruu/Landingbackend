@@ -1,6 +1,7 @@
 package Landing.Backend.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
@@ -12,15 +13,15 @@ public class EmailService {
     @Autowired
     private JavaMailSender mailSender;
 
-    // 1. EL NUEVO: Formulario de Contacto (El cliente te escribe a ti)
+    @Value("${spring.mail.username}")
+    private String supportEmail;
+
     @Async
     public void sendContactEmail(String name, String fromEmail, String messageBody) {
         try {
             SimpleMailMessage mail = new SimpleMailMessage();
             
-            // 👇 CAMBIAMOS ESTO POR TU GMAIL
-            mail.setTo("weblandingsuite@gmail.com"); 
-            
+            mail.setTo(supportEmail); 
             mail.setReplyTo(fromEmail); 
             mail.setSubject("Nuevo mensaje de contacto de: " + name);
             mail.setText("Nombre: " + name + "\nCorreo: " + fromEmail + "\n\nMensaje:\n" + messageBody);
@@ -32,7 +33,6 @@ public class EmailService {
         }
     }
 
-    // 2. ACTUALIZADO: Correo de Bienvenida al Registrarse
     @Async
     public void sendWelcomeEmail(String userEmail, String name) {
         System.out.println("📧 [ASYNC] Enviando correo real de bienvenida a: " + userEmail);
@@ -52,7 +52,6 @@ public class EmailService {
         }
     }
 
-    // 3. ACTUALIZADO: Correo de "Tu Landing está lista" (Desde la IA)
     @Async
     public void sendProjectReadyEmail(String userEmail, String projectName, String signedUrl) {
         System.out.println("📧 [ASYNC] Notificando proyecto listo a: " + userEmail);

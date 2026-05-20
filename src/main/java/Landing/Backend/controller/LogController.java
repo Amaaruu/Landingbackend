@@ -1,8 +1,7 @@
 package Landing.Backend.controller;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,14 +16,12 @@ import Landing.Backend.service.LandingProjectService;
 import Landing.Backend.service.LogService;
 import Landing.Backend.service.UserService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/v1/logs")
 @RequiredArgsConstructor
@@ -36,8 +33,7 @@ public class LogController {
     private final LandingProjectService landingProjectService;
 
     @PostMapping
-    @Operation(summary = "Registrar evento manualmente",
-               description = "Permite registrar un log de auditoría desde contextos externos")
+    @Operation(summary = "Registrar evento manualmente")
     public ResponseEntity<LogResponseDTO> createLog(
             @Valid @RequestBody LogRequestDTO requestDTO,
             HttpServletRequest httpRequest) {
@@ -62,19 +58,14 @@ public class LogController {
                 .build();
 
         Log createdLog = logService.recordLog(logEntry);
-        log.info("[LOG CONTROLLER] Log creado manualmente: ID {}", createdLog.getLogId());
 
         return new ResponseEntity<>(convertToResponseDTO(createdLog), HttpStatus.CREATED);
     }
 
     @GetMapping
-    @Operation(summary = "Listar historial de eventos",
-               description = "Obtiene todos los logs registrados, ordenados del más reciente al más antiguo")
-    public ResponseEntity<List<LogResponseDTO>> getAllLogs() {
-        List<LogResponseDTO> logs = logService.getAllLogs().stream()
-                .map(this::convertToResponseDTO)
-                .collect(Collectors.toList());
-        log.debug("[LOG CONTROLLER] GET /logs → {} registros", logs.size());
+    @Operation(summary = "Listar historial de eventos")
+    public ResponseEntity<Page<LogResponseDTO>> getAllLogs(Pageable pageable) {
+        Page<LogResponseDTO> logs = logService.getAllLogs(pageable).map(this::convertToResponseDTO);
         return ResponseEntity.ok(logs);
     }
 

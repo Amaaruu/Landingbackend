@@ -9,12 +9,13 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 @Entity
 @Table(name = "users")
-@SQLDelete(sql = "UPDATE users SET active = false WHERE user_id = ?") // Borrado lógico
-@SQLRestriction("active = true") // Filtro automático para consultas
+@SQLDelete(sql = "UPDATE users SET active = false WHERE user_id = ?")
+@SQLRestriction("active = true")
 @Getter 
 @Setter
 @NoArgsConstructor
@@ -42,7 +43,7 @@ public class User {
     private String password;
 
     @Column(nullable = false)
-    private String role; // admin, user
+    private String role;
 
     @Column(nullable = false)
     @Builder.Default
@@ -53,7 +54,7 @@ public class User {
 
     @PrePersist
     protected void onCreate() {
-        this.registeredAt = LocalDateTime.now();
+        this.registeredAt = LocalDateTime.now(ZoneId.of("UTC"));
         if (this.uuid == null) {
             this.uuid = UUID.randomUUID().toString();
         }
