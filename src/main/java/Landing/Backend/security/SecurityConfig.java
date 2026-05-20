@@ -1,8 +1,10 @@
+// src/main/java/Landing/Backend/security/SecurityConfig.java
 package Landing.Backend.security;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -34,14 +36,21 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/api/v1/auth/**",
-                    "/api/v1/plans",
-                    "/api/v1/contact",
                     "/api/v1/health",
                     "/landings/**",
                     "/swagger-ui/**",
                     "/v3/api-docs/**",
                     "/error"
                 ).permitAll()
+
+                .requestMatchers(HttpMethod.GET, "/api/v1/plans").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/v1/contact").permitAll()
+                .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
+                .requestMatchers("/api/v1/logs/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST,   "/api/v1/plans").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT,    "/api/v1/plans/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/plans/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PATCH,  "/api/v1/projects/*/status").hasRole("ADMIN")
                 .anyRequest().authenticated()
             )
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
