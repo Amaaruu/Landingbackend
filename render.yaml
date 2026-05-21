@@ -24,7 +24,7 @@ services:
       - key: PYTHON_API_URL
         value: "https://wlsuite-python-api.onrender.com"
       - key: JWT_SECRET_KEY
-        generateValue: true
+        sync: false
       - key: FRONTEND_URL
         value: "https://www.weblandingsuite.com"
       - key: MAIL_USERNAME

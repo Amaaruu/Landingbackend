@@ -38,18 +38,17 @@ public class ImageUploadService {
 
         try {
             String publicId = buildPublicId(context);
-            String eagerTransformation = "w_1920,h_1080,c_limit,f_webp,q_auto:good";
-
             @SuppressWarnings("unchecked")
             Map<String, Object> uploadOptions = ObjectUtils.asMap(
                 "public_id",    publicId,
                 "folder",       uploadFolder,
                 "overwrite",    false,
-                "eager",        eagerTransformation,
-                "eager_async",  false,
                 "quality",      "auto:good",
-                "fetch_format", "auto"
+                "fetch_format", "auto",
+                "resource_type","image"
             );
+
+            log.info("[ImageUploadService] Iniciando upload — context: {}, publicId: {}", context, publicId);
 
             @SuppressWarnings("unchecked")
             Map<String, Object> result = (Map<String, Object>) cloudinary.uploader().upload(
@@ -57,27 +56,35 @@ public class ImageUploadService {
                 uploadOptions
             );
 
-            Object eagerRaw = result.get("eager");
-            if (eagerRaw instanceof List<?> eagerList && !eagerList.isEmpty()) {
-                Object first = eagerList.get(0);
-                if (first instanceof Map<?, ?> eagerMap) {
-                    Object secureUrl = eagerMap.get("secure_url");
-                    if (secureUrl instanceof String url && !url.isBlank()) {
-                        return url;
-                    }
-                }
+            String secureUrl = (String) result.get("secure_url");
+
+            if (secureUrl == null || secureUrl.isBlank()) {
+                log.error("[ImageUploadService] Cloudinary no devolvió secure_url. Respuesta completa: {}", result);
+                throw new BusinessLogicException(
+                    "El CDN no devolvió una URL válida. Intenta de nuevo.",
+                    HttpStatus.INTERNAL_SERVER_ERROR
+                );
             }
 
-            return (String) result.get("secure_url");
+            log.info("[ImageUploadService] Upload exitoso — url: {}", secureUrl);
+            return secureUrl;
+
+        } catch (BusinessLogicException e) {
+            throw e;
 
         } catch (IOException e) {
-            log.error("[ImageUploadService] IOException al subir imagen: {}", e.getMessage(), e);
+            log.error("[ImageUploadService] IOException — mensaje: {}", e.getMessage(), e);
             throw new BusinessLogicException(
                 "Error de conexión al subir la imagen. Intenta de nuevo.",
                 HttpStatus.INTERNAL_SERVER_ERROR
             );
+
         } catch (Exception e) {
-            log.error("[ImageUploadService] Error inesperado al subir imagen: {}", e.getMessage(), e);
+            log.error("[ImageUploadService] Error inesperado — tipo: {}, mensaje: {}",
+                e.getClass().getSimpleName(), e.getMessage(), e);
+            if (e.getCause() != null) {
+                log.error("[ImageUploadService] Causa raíz: {}", e.getCause().getMessage());
+            }
             throw new BusinessLogicException(
                 "Error al procesar la imagen. Verifica la configuración del CDN.",
                 HttpStatus.INTERNAL_SERVER_ERROR
