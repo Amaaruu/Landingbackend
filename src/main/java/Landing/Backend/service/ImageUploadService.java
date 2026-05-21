@@ -4,6 +4,7 @@ import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import Landing.Backend.exception.BusinessLogicException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ImageUploadService {
@@ -36,32 +38,48 @@ public class ImageUploadService {
 
         try {
             String publicId = buildPublicId(context);
+            String eagerTransformation = "w_1920,h_1080,c_limit,f_webp,q_auto:good";
 
             @SuppressWarnings("unchecked")
-            Map<String, Object> result = cloudinary.uploader().upload(
-                file.getBytes(),
-                ObjectUtils.asMap(
-                    "public_id",       publicId,
-                    "folder",          uploadFolder,
-                    "overwrite",       false,
-                    "eager",           "w_1920,h_1080,c_limit,f_webp,q_auto:good",
-                    "eager_async",     false,
-                    "quality",         "auto:good",
-                    "fetch_format",    "auto"
-                )
+            Map<String, Object> uploadOptions = ObjectUtils.asMap(
+                "public_id",    publicId,
+                "folder",       uploadFolder,
+                "overwrite",    false,
+                "eager",        eagerTransformation,
+                "eager_async",  false,
+                "quality",      "auto:good",
+                "fetch_format", "auto"
             );
 
             @SuppressWarnings("unchecked")
-            List<Map<String, Object>> eager = (List<Map<String, Object>>) result.get("eager");
-            if (eager != null && !eager.isEmpty()) {
-                return (String) eager.get(0).get("secure_url");
+            Map<String, Object> result = (Map<String, Object>) cloudinary.uploader().upload(
+                file.getBytes(),
+                uploadOptions
+            );
+
+            Object eagerRaw = result.get("eager");
+            if (eagerRaw instanceof List<?> eagerList && !eagerList.isEmpty()) {
+                Object first = eagerList.get(0);
+                if (first instanceof Map<?, ?> eagerMap) {
+                    Object secureUrl = eagerMap.get("secure_url");
+                    if (secureUrl instanceof String url && !url.isBlank()) {
+                        return url;
+                    }
+                }
             }
 
             return (String) result.get("secure_url");
 
         } catch (IOException e) {
+            log.error("[ImageUploadService] IOException al subir imagen: {}", e.getMessage(), e);
             throw new BusinessLogicException(
-                "Error al subir la imagen. Intenta de nuevo.",
+                "Error de conexión al subir la imagen. Intenta de nuevo.",
+                HttpStatus.INTERNAL_SERVER_ERROR
+            );
+        } catch (Exception e) {
+            log.error("[ImageUploadService] Error inesperado al subir imagen: {}", e.getMessage(), e);
+            throw new BusinessLogicException(
+                "Error al procesar la imagen. Verifica la configuración del CDN.",
                 HttpStatus.INTERNAL_SERVER_ERROR
             );
         }
@@ -72,15 +90,20 @@ public class ImageUploadService {
         try {
             String publicId = extractPublicIdFromUrl(imageUrl);
             cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
+            log.info("[ImageUploadService] Imagen eliminada del CDN: {}", publicId);
         } catch (Exception e) {
-            System.err.println("[ImageUploadService] Advertencia: no se pudo eliminar imagen: " + imageUrl);
+            log.warn("[ImageUploadService] No se pudo eliminar imagen: {} — {}", imageUrl, e.getMessage());
         }
     }
 
-    // ── Validaciones
+    // ── Validaciones ──────────────────────────────────────────────────────────
+
     private void validateFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new BusinessLogicException("El archivo de imagen está vacío.", HttpStatus.BAD_REQUEST);
+            throw new BusinessLogicException(
+                "El archivo de imagen está vacío.",
+                HttpStatus.BAD_REQUEST
+            );
         }
 
         String contentType = file.getContentType();
@@ -101,7 +124,6 @@ public class ImageUploadService {
     }
 
     private String buildPublicId(String context) {
-        // Contexto sanitizado + UUID para evitar colisiones y path traversal
         String safeContext = (context != null ? context : "general")
             .replaceAll("[^a-zA-Z0-9_-]", "_")
             .toLowerCase();
