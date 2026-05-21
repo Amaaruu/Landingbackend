@@ -31,9 +31,5 @@ services:
         sync: false
       - key: MAIL_PASSWORD
         sync: false
-      - key: CLOUDINARY_CLOUD_NAME
-        sync: false
-      - key: CLOUDINARY_API_KEY
-        sync: false
-      - key: CLOUDINARY_API_SECRET
+      - key: CLOUDINARY_URL
         sync: false
