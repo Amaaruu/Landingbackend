@@ -1,16 +1,20 @@
 package Landing.Backend.controller;
 
 import Landing.Backend.dto.ImageUploadResponseDTO;
+import Landing.Backend.exception.BusinessLogicException;
 import Landing.Backend.service.ImageUploadService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/images")
 @RequiredArgsConstructor
@@ -26,8 +30,26 @@ public class ImageController {
             @RequestParam(value = "context", defaultValue = "project") String context,
             Authentication authentication) {
 
-        String userContext = authentication.getName().split("@")[0] + "_" + context;
-        String imageUrl    = imageUploadService.uploadImage(file, userContext);
+        if (authentication == null || !authentication.isAuthenticated()) {
+            log.warn("[ImageController] Intento de upload sin autenticación válida.");
+            throw new BusinessLogicException(
+                "Sesión inválida o expirada. Por favor vuelve a iniciar sesión.",
+                HttpStatus.UNAUTHORIZED
+            );
+        }
+
+        String userName;
+        try {
+            userName = authentication.getName().split("@")[0];
+        } catch (Exception e) {
+            log.warn("[ImageController] No se pudo extraer nombre del usuario autenticado.");
+            userName = "user";
+        }
+
+        String userContext = userName + "_" + context;
+        log.info("[ImageController] Upload solicitado — user: {}, context: {}", userName, context);
+
+        String imageUrl = imageUploadService.uploadImage(file, userContext);
 
         return ResponseEntity.ok(new ImageUploadResponseDTO(
             imageUrl,
