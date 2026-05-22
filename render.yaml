@@ -27,9 +27,13 @@ services:
         sync: false
       - key: FRONTEND_URL
         value: "https://www.weblandingsuite.com"
-      - key: MAIL_USERNAME
+      - key: RESEND_API_KEY
         sync: false
-      - key: MAIL_PASSWORD
+      - key: RESEND_FROM_EMAIL
+        value: "noreply@weblandingsuite.com"
+      - key: SUPPORT_EMAIL
+        value: "weblandingsuite@gmail.com"
+      - key: CLOUDINARY_CLOUD_NAME
         sync: false
       - key: CLOUDINARY_URL
         sync: false
