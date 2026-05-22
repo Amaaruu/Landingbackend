@@ -1,5 +1,6 @@
 package Landing.Backend.service;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -39,6 +40,10 @@ public class LogService {
 
     public Page<Log> getAllLogs(Pageable pageable) {
         return logRepository.findAllLogs(pageable);
+    }
+
+    public List<Log> getAllLogsUnpaged() {
+        return logRepository.findAllLogsUnpaged();
     }
 
     public Optional<Log> getLogById(Integer id) {
