@@ -11,34 +11,29 @@ import org.springframework.stereotype.Service;
 @Service
 public class EmailService {
 
-    // Estas variables tomarán los valores que pongas en Render (Environment)
     @Value("${resend.api-key}")
     private String resendApiKey;
 
-    @Value("${resend.from-email}") 
+    @Value("${resend.from-email}")
     private String fromEmailAddress;
 
-    @Value("${spring.mail.username}") 
+    @Value("${support.email}")
     private String supportEmail;
 
-    // Método privado centralizado para enviar a través de la API REST de Resend
     private void sendEmailViaResend(String toEmail, String subject, String bodyText, String replyToEmail) {
         Resend resend = new Resend(resendApiKey);
 
-        // Construimos el correo
         CreateEmailOptions.Builder emailBuilder = CreateEmailOptions.builder()
-                .from("weblandingsuite <" + fromEmailAddress + ">")
+                .from("WebLandingSuite <" + fromEmailAddress + ">") 
                 .to(toEmail)
                 .subject(subject)
                 .text(bodyText);
 
-        // Si es el formulario de contacto, agregamos el Reply-To para poder responderle al usuario directamente
         if (replyToEmail != null && !replyToEmail.isBlank()) {
             emailBuilder.replyTo(replyToEmail);
         }
 
         try {
-            // Enviamos a través de la API
             CreateEmailResponse data = resend.emails().send(emailBuilder.build());
             System.out.println("✅ [RESEND] Correo enviado a " + toEmail + ". ID: " + data.getId());
         } catch (ResendException e) {
@@ -51,8 +46,6 @@ public class EmailService {
         System.out.println("📧 [ASYNC] Procesando correo de contacto de: " + userEmail);
         String subject = "Nuevo mensaje de contacto de: " + name;
         String text = "Nombre: " + name + "\nCorreo: " + userEmail + "\n\nMensaje:\n" + messageBody;
-        
-        // Enviamos a soporte, poniendo al usuario en el "Reply-To"
         sendEmailViaResend(supportEmail, subject, text, userEmail);
     }
 
@@ -61,9 +54,8 @@ public class EmailService {
         System.out.println("📧 [ASYNC] Enviando correo de bienvenida a: " + userEmail);
         String subject = "¡Bienvenido a WebLandingSuite, " + name + "!";
         String text = "Hola " + name + ",\n\n"
-                + "¡Gracias por unirte a WebLandingSuite! Estamos emocionados de ayudarte a crear Landing Pages increíbles con Inteligencia Artificial.\n\n"
+                + "¡Gracias por unirte a WebLandingSuite!\n\n"
                 + "Saludos,\nEl equipo de WebLandingSuite";
-                
         sendEmailViaResend(userEmail, subject, text, null);
     }
 
@@ -72,12 +64,10 @@ public class EmailService {
         System.out.println("📧 [ASYNC] Notificando proyecto listo a: " + userEmail);
         String subject = "🚀 ¡Tu proyecto '" + projectName + "' está listo!";
         String text = "Hola,\n\n"
-                + "Nuestra Inteligencia Artificial ha terminado de generar tu proyecto: " + projectName + ".\n\n"
+                + "Tu proyecto: " + projectName + " está listo.\n\n"
                 + "Puedes verlo aquí (válido por 24 horas):\n"
                 + signedUrl + "\n\n"
-                + "¡Esperamos que te encante el resultado!\n\n"
                 + "Saludos,\nEl equipo de WebLandingSuite";
-                
         sendEmailViaResend(userEmail, subject, text, null);
     }
 }
