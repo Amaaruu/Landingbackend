@@ -1,5 +1,8 @@
 package Landing.Backend.controller;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -63,9 +66,19 @@ public class LogController {
     }
 
     @GetMapping
-    @Operation(summary = "Listar historial de eventos")
+    @Operation(summary = "Listar historial de eventos (paginado)")
     public ResponseEntity<Page<LogResponseDTO>> getAllLogs(Pageable pageable) {
         Page<LogResponseDTO> logs = logService.getAllLogs(pageable).map(this::convertToResponseDTO);
+        return ResponseEntity.ok(logs);
+    }
+
+    @GetMapping("/all")
+    @Operation(summary = "Listar todos los eventos sin paginación (panel admin)")
+    public ResponseEntity<List<LogResponseDTO>> getAllLogsUnpaged() {
+        List<LogResponseDTO> logs = logService.getAllLogsUnpaged()
+                .stream()
+                .map(this::convertToResponseDTO)
+                .collect(Collectors.toList());
         return ResponseEntity.ok(logs);
     }
 
