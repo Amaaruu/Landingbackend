@@ -7,7 +7,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import Landing.Backend.model.Log;
@@ -16,12 +15,10 @@ import Landing.Backend.model.Log;
 public interface LogRepository extends JpaRepository<Log, Integer> {
 
     @EntityGraph(attributePaths = {"user", "project"})
-    @Query("SELECT l FROM Log l ORDER BY l.eventAt DESC")
-    Page<Log> findAllLogs(Pageable pageable);
+    Page<Log> findAllByOrderByEventAtDesc(Pageable pageable);
 
     @EntityGraph(attributePaths = {"user", "project"})
-    @Query("SELECT l FROM Log l ORDER BY l.eventAt DESC")
-    List<Log> findAllLogsUnpaged();
+    List<Log> findAllByOrderByEventAtDesc();
 
     @EntityGraph(attributePaths = {"user", "project"})
     Optional<Log> findById(Integer id);
