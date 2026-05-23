@@ -1,9 +1,11 @@
 package Landing.Backend.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -13,12 +15,14 @@ import Landing.Backend.model.Log;
 @Repository
 public interface LogRepository extends JpaRepository<Log, Integer> {
 
-    @Query(
-        value      = "SELECT l FROM Log l LEFT JOIN FETCH l.user ORDER BY l.eventAt DESC",
-        countQuery = "SELECT COUNT(l) FROM Log l"
-    )
+    @EntityGraph(attributePaths = {"user", "project"})
+    @Query("SELECT l FROM Log l ORDER BY l.eventAt DESC")
     Page<Log> findAllLogs(Pageable pageable);
 
-    @Query("SELECT l FROM Log l LEFT JOIN FETCH l.user ORDER BY l.eventAt DESC")
+    @EntityGraph(attributePaths = {"user", "project"})
+    @Query("SELECT l FROM Log l ORDER BY l.eventAt DESC")
     List<Log> findAllLogsUnpaged();
+
+    @EntityGraph(attributePaths = {"user", "project"})
+    Optional<Log> findById(Integer id);
 }
