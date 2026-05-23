@@ -39,11 +39,11 @@ public class LogService {
     }
 
     public Page<Log> getAllLogs(Pageable pageable) {
-        return logRepository.findAllLogs(pageable);
+        return logRepository.findAllByOrderByEventAtDesc(pageable);
     }
 
     public List<Log> getAllLogsUnpaged() {
-        return logRepository.findAllLogsUnpaged();
+        return logRepository.findAllByOrderByEventAtDesc();
     }
 
     public Optional<Log> getLogById(Integer id) {
