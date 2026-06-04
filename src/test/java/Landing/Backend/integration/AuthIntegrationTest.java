@@ -9,6 +9,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.UUID;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.hamcrest.Matchers.*;
@@ -16,14 +18,20 @@ import static org.hamcrest.Matchers.*;
 @AutoConfigureMockMvc
 @DisplayName("Auth API — pruebas de integración")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class AuthIntegrationTest extends AbstractIntegrationTest {
+@Tag("regression")
+public class AuthIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired private MockMvc        mvc;
     @Autowired private ObjectMapper  objectMapper;
 
     private static final String BASE_URL  = "/api/v1/auth";
-    private static final String TEST_EMAIL = "integration@test.com";
     private static final String TEST_PASS  = "Password123!";
+    private String testEmail;
+
+    @BeforeAll
+    void generateDynamicEmail() {
+        testEmail = "integration_" + UUID.randomUUID().toString() + "@test.com";
+    }
 
     @Test
     @Order(1)
@@ -32,7 +40,7 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
         UserRequestDTO dto = new UserRequestDTO();
         dto.setName("Test");
         dto.setLastname("User");
-        dto.setEmail(TEST_EMAIL);
+        dto.setEmail(testEmail);
         dto.setPassword(TEST_PASS);
 
         mvc.perform(post(BASE_URL + "/register")
@@ -45,18 +53,18 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     @Order(2)
-    @DisplayName("POST /register → 400 si email ya existe")
+    @DisplayName("POST /register → 409 si email ya existe")
     void shouldRejectDuplicateEmail() throws Exception {
         UserRequestDTO dto = new UserRequestDTO();
         dto.setName("Test");
         dto.setLastname("User");
-        dto.setEmail(TEST_EMAIL);
+        dto.setEmail(testEmail);
         dto.setPassword(TEST_PASS);
 
         mvc.perform(post(BASE_URL + "/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(dto)))
-           .andExpect(status().is4xxClientError());
+           .andExpect(status().isConflict());
     }
 
     @Test
@@ -67,7 +75,7 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     { "email": "%s", "password": "%s" }
-                    """.formatted(TEST_EMAIL, TEST_PASS)))
+                    """.formatted(testEmail, TEST_PASS)))
            .andExpect(status().isOk())
            .andExpect(jsonPath("$.token", notNullValue()))
            .andExpect(jsonPath("$.name",  notNullValue()));
@@ -81,7 +89,7 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
                     { "email": "%s", "password": "WrongPassword" }
-                    """.formatted(TEST_EMAIL)))
+                    """.formatted(testEmail)))
            .andExpect(status().isUnauthorized());
     }
 
