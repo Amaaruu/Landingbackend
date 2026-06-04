@@ -2,6 +2,7 @@ package Landing.Backend.exception;
 
 import Landing.Backend.dto.ErrorResponseDTO;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -33,6 +34,12 @@ public class GlobalExceptionHandler {
         log.warn("[ResourceNotFoundException] {}", ex.getMessage());
         // Mensaje genérico: no exponer IDs ni nombres de clases al cliente
         return buildResponse("El recurso solicitado no fue encontrado.", HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponseDTO> handleBadCredentials(BadCredentialsException ex) {
+        log.warn("[BadCredentialsException] Intento de login fallido: {}", ex.getMessage());
+        return buildResponse("Email o contraseña incorrectos.", HttpStatus.UNAUTHORIZED);
     }
 
     @ExceptionHandler(Exception.class)
