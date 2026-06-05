@@ -72,10 +72,9 @@ class TransactionServiceTest {
         @Test
         @DisplayName("crea una transacción correctamente para usuario y plan válidos")
         void shouldCreateTransactionSuccessfully() {
-            // Arrange — paymentMethod es obligatorio (@NotBlank en DTO)
             TransactionRequestDTO dto = new TransactionRequestDTO();
             dto.setPlanId(10);
-            dto.setPaymentMethod("transferencia"); // ← CAMPO OBLIGATORIO
+            dto.setPaymentMethod("transferencia");
 
             when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(testUser));
             when(designPlanRepository.findById(10)).thenReturn(Optional.of(testPlan));
@@ -88,10 +87,8 @@ class TransactionServiceTest {
             saved.setPaymentMethod("transferencia");
             when(transactionRepository.save(any(Transaction.class))).thenReturn(saved);
 
-            // Act
             Transaction result = transactionService.createTransaction(dto);
 
-            // Assert
             assertThat(result.getTransactionId()).isEqualTo(100);
             assertThat(result.getUser().getEmail()).isEqualTo("user@test.com");
             assertThat(result.getPaymentMethod()).isEqualTo("transferencia");
@@ -103,7 +100,7 @@ class TransactionServiceTest {
         void shouldThrowWhenPlanNotFound() {
             TransactionRequestDTO dto = new TransactionRequestDTO();
             dto.setPlanId(999);
-            dto.setPaymentMethod("transferencia"); // ← siempre incluir
+            dto.setPaymentMethod("transferencia");
 
             when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(testUser));
             when(designPlanRepository.findById(999)).thenReturn(Optional.empty());

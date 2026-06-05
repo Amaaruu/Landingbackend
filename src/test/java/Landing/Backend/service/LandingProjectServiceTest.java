@@ -1,6 +1,7 @@
 package Landing.Backend.service;
 
 import Landing.Backend.dto.LandingProjectRequestDTO;
+import Landing.Backend.dto.LandingProjectResponseDTO;
 import Landing.Backend.exception.BusinessLogicException;
 import Landing.Backend.exception.ResourceNotFoundException;
 import Landing.Backend.model.*;
@@ -132,7 +133,6 @@ class LandingProjectServiceTest {
         }
     }
 
-    // ── normalizePlanName — prueba del método package-private via getUserPlanSafe ──
     @Nested
     @DisplayName("getUserPlanSafe() normalización de nombre de plan")
     class NormalizePlanName {
@@ -141,8 +141,7 @@ class LandingProjectServiceTest {
         @DisplayName("normaliza 'Básico' → 'BASIC'")
         void shouldNormalizeBasico() {
             when(transactionRepository.findById(1)).thenReturn(Optional.of(testTransaction));
-            String result = landingProjectService.getUserPlanSafe(1);
-            assertThat(result).isEqualTo("BASIC");
+            assertThat(landingProjectService.getUserPlanSafe(1)).isEqualTo("BASIC");
         }
 
         @Test
@@ -150,8 +149,7 @@ class LandingProjectServiceTest {
         void shouldNormalizeIntermedio() {
             testPlan.setName("Intermedio");
             when(transactionRepository.findById(1)).thenReturn(Optional.of(testTransaction));
-            String result = landingProjectService.getUserPlanSafe(1);
-            assertThat(result).isEqualTo("INTERMEDIATE");
+            assertThat(landingProjectService.getUserPlanSafe(1)).isEqualTo("INTERMEDIATE");
         }
 
         @Test
@@ -159,12 +157,180 @@ class LandingProjectServiceTest {
         void shouldFallbackToBasic() {
             testPlan.setName("Desconocido");
             when(transactionRepository.findById(1)).thenReturn(Optional.of(testTransaction));
-            String result = landingProjectService.getUserPlanSafe(1);
-            assertThat(result).isEqualTo("BASIC");
+            assertThat(landingProjectService.getUserPlanSafe(1)).isEqualTo("BASIC");
         }
     }
 
-    // ── Helper ────────────────────────────────────────────────────────────────
+    @Nested
+    @DisplayName("getProjectById() y getProjectByIdForUser()")
+    class GetProjectById {
+
+        @Test
+        @DisplayName("getProjectById() retorna DTO cuando el proyecto existe")
+        void shouldReturnProjectById() {
+            LandingProject project = buildProject();
+            when(projectRepository.findById(100)).thenReturn(Optional.of(project));
+
+            LandingProjectResponseDTO result = landingProjectService.getProjectById(100);
+
+            assertThat(result.getProjectId()).isEqualTo(100);
+            assertThat(result.getStatus()).isEqualTo("Ready");
+        }
+
+        @Test
+        @DisplayName("getProjectById() lanza ResourceNotFoundException para ID inexistente")
+        void shouldThrowWhenProjectNotFound() {
+            when(projectRepository.findById(999)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> landingProjectService.getProjectById(999))
+                    .isInstanceOf(ResourceNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("getProjectByIdForUser() retorna proyecto cuando pertenece al usuario")
+        void shouldReturnProjectForAuthenticatedUser() {
+            LandingProject project = buildProject();
+            when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(testUser));
+            when(projectRepository.findByProjectIdAndUserId(100, 1))
+                    .thenReturn(Optional.of(project));
+
+            LandingProjectResponseDTO result = landingProjectService.getProjectByIdForUser(100);
+
+            assertThat(result.getProjectId()).isEqualTo(100);
+        }
+
+        @Test
+        @DisplayName("getProjectByIdForUser() lanza FORBIDDEN si existe pero pertenece a otro usuario")
+        void shouldThrowForbiddenWhenProjectBelongsToOtherUser() {
+            when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(testUser));
+            when(projectRepository.findByProjectIdAndUserId(100, 1))
+                    .thenReturn(Optional.empty());
+            when(projectRepository.existsById(100)).thenReturn(true);
+
+            assertThatThrownBy(() -> landingProjectService.getProjectByIdForUser(100))
+                    .isInstanceOf(BusinessLogicException.class)
+                    .satisfies(ex -> assertThat(((BusinessLogicException) ex).getStatus())
+                            .isEqualTo(HttpStatus.FORBIDDEN));
+        }
+
+        @Test
+        @DisplayName("getProjectByIdForUser() lanza NOT_FOUND si el proyecto no existe")
+        void shouldThrowNotFoundWhenProjectDoesNotExist() {
+            when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(testUser));
+            when(projectRepository.findByProjectIdAndUserId(999, 1))
+                    .thenReturn(Optional.empty());
+            when(projectRepository.existsById(999)).thenReturn(false);
+
+            assertThatThrownBy(() -> landingProjectService.getProjectByIdForUser(999))
+                    .isInstanceOf(ResourceNotFoundException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("updateProjectStatus()")
+    class UpdateProjectStatus {
+
+        @Test
+        @DisplayName("actualiza el estado del proyecto correctamente")
+        void shouldUpdateStatus() {
+            LandingProject project = buildProject();
+            when(projectRepository.findById(100)).thenReturn(Optional.of(project));
+            when(projectRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            LandingProjectResponseDTO result =
+                    landingProjectService.updateProjectStatus(100, "Failed");
+
+            assertThat(result.getStatus()).isEqualTo("Failed");
+            verify(projectRepository).save(project);
+        }
+
+        @Test
+        @DisplayName("lanza ResourceNotFoundException para ID inexistente")
+        void shouldThrowWhenProjectNotFound() {
+            when(projectRepository.findById(999)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> landingProjectService.updateProjectStatus(999, "Ready"))
+                    .isInstanceOf(ResourceNotFoundException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("deleteProject() y deleteProjectForUser()")
+    class DeleteProject {
+
+        @Test
+        @DisplayName("deleteProject() llama a repository.delete() con el proyecto correcto")
+        void shouldDeleteProject() {
+            LandingProject project = buildProject();
+            when(projectRepository.findById(100)).thenReturn(Optional.of(project));
+
+            landingProjectService.deleteProject(100);
+
+            verify(projectRepository).delete(project);
+        }
+
+        @Test
+        @DisplayName("deleteProject() lanza ResourceNotFoundException para ID inexistente")
+        void shouldThrowWhenDeletingNonExistentProject() {
+            when(projectRepository.findById(999)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> landingProjectService.deleteProject(999))
+                    .isInstanceOf(ResourceNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("deleteProjectForUser() elimina cuando el proyecto pertenece al usuario")
+        void shouldDeleteProjectForAuthenticatedUser() {
+            LandingProject project = buildProject();
+            when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(testUser));
+            when(projectRepository.findByProjectIdAndUserId(100, 1))
+                    .thenReturn(Optional.of(project));
+
+            landingProjectService.deleteProjectForUser(100);
+
+            verify(projectRepository).delete(project);
+        }
+
+        @Test
+        @DisplayName("deleteProjectForUser() lanza FORBIDDEN si el proyecto pertenece a otro usuario")
+        void shouldThrowForbiddenWhenDeletingOtherUsersProject() {
+            when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(testUser));
+            when(projectRepository.findByProjectIdAndUserId(100, 1))
+                    .thenReturn(Optional.empty());
+            when(projectRepository.existsById(100)).thenReturn(true);
+
+            assertThatThrownBy(() -> landingProjectService.deleteProjectForUser(100))
+                    .isInstanceOf(BusinessLogicException.class)
+                    .satisfies(ex -> assertThat(((BusinessLogicException) ex).getStatus())
+                            .isEqualTo(HttpStatus.FORBIDDEN));
+        }
+    }
+
+    @Nested
+    @DisplayName("getProjectEntityById()")
+    class GetProjectEntityById {
+
+        @Test
+        @DisplayName("retorna la entidad cuando el proyecto existe")
+        void shouldReturnEntity() {
+            LandingProject project = buildProject();
+            when(projectRepository.findById(100)).thenReturn(Optional.of(project));
+
+            LandingProject result = landingProjectService.getProjectEntityById(100);
+
+            assertThat(result.getProjectId()).isEqualTo(100);
+        }
+
+        @Test
+        @DisplayName("lanza ResourceNotFoundException cuando no existe")
+        void shouldThrowWhenNotFound() {
+            when(projectRepository.findById(999)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> landingProjectService.getProjectEntityById(999))
+                    .isInstanceOf(ResourceNotFoundException.class);
+        }
+    }
+
     private LandingProjectRequestDTO buildValidDTO() {
         LandingProjectRequestDTO dto = new LandingProjectRequestDTO();
         dto.setTransactionId(1);
@@ -175,5 +341,16 @@ class LandingProjectServiceTest {
         dto.setCommunicationTone("cercano");
         dto.setLandingGoal("ventas");
         return dto;
+    }
+
+    private LandingProject buildProject() {
+        return LandingProject.builder()
+                .projectId(100)
+                .transaction(testTransaction)
+                .projectName("Mi Negocio")
+                .projectIdea("Vender café online")
+                .callToAction("Contáctanos")
+                .status("Ready")
+                .build();
     }
 }

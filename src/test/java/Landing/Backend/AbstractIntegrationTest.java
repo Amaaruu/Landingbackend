@@ -14,7 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class AbstractIntegrationTest {
 
-    // ── Servicios externos — mockeados para evitar llamadas reales ──────────
+    //Servicios externos — mockeados para evitar llamadas reales
     @MockBean
     protected EmailService emailService;
 

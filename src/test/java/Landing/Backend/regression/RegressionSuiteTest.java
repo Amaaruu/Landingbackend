@@ -11,8 +11,7 @@ import org.junit.platform.suite.api.SuiteDisplayName;
  */
 @Suite
 @SuiteDisplayName("Suite de Regresión — WLSuite Backend")
-@SelectPackages("Landing.Backend") // Escanea desde la raíz de tu proyecto
-@IncludeTags("regression")         // Solo atrapa lo que tenga esta etiqueta
+@SelectPackages("Landing.Backend")
+@IncludeTags("regression")
 public class RegressionSuiteTest {
-    // Clase vacía de configuración
 }

@@ -104,4 +104,24 @@ public class AuthIntegrationTest extends AbstractIntegrationTest {
                     """))
            .andExpect(status().isBadRequest());
     }
+
+    @Test @Order(6)
+    @DisplayName("POST /register → procesa correctamente con header X-Real-IP")
+    void shouldRegisterWithRealIpHeader() throws Exception {
+        String uniqueEmail = "realip_" + UUID.randomUUID().toString().replace("-", "") + "@test.com";
+
+        mvc.perform(post(BASE_URL + "/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Real-IP", "198.51.100.10")
+                .content("""
+                    {
+                      "name":"RealIp",
+                      "lastname":"Test",
+                      "email":"%s",
+                      "password":"Pass123!"
+                    }
+                    """.formatted(uniqueEmail)))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$.token").isNotEmpty());
+    }
 }
