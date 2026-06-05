@@ -72,9 +72,10 @@ class TransactionServiceTest {
         @Test
         @DisplayName("crea una transacción correctamente para usuario y plan válidos")
         void shouldCreateTransactionSuccessfully() {
-            // Arrange
+            // Arrange — paymentMethod es obligatorio (@NotBlank en DTO)
             TransactionRequestDTO dto = new TransactionRequestDTO();
             dto.setPlanId(10);
+            dto.setPaymentMethod("transferencia"); // ← CAMPO OBLIGATORIO
 
             when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(testUser));
             when(designPlanRepository.findById(10)).thenReturn(Optional.of(testPlan));
@@ -84,12 +85,16 @@ class TransactionServiceTest {
             saved.setUser(testUser);
             saved.setPlan(testPlan);
             saved.setStatus("PENDIENTE");
+            saved.setPaymentMethod("transferencia");
             when(transactionRepository.save(any(Transaction.class))).thenReturn(saved);
 
+            // Act
             Transaction result = transactionService.createTransaction(dto);
 
+            // Assert
             assertThat(result.getTransactionId()).isEqualTo(100);
             assertThat(result.getUser().getEmail()).isEqualTo("user@test.com");
+            assertThat(result.getPaymentMethod()).isEqualTo("transferencia");
             verify(transactionRepository, times(1)).save(any(Transaction.class));
         }
 
@@ -98,6 +103,7 @@ class TransactionServiceTest {
         void shouldThrowWhenPlanNotFound() {
             TransactionRequestDTO dto = new TransactionRequestDTO();
             dto.setPlanId(999);
+            dto.setPaymentMethod("transferencia"); // ← siempre incluir
 
             when(userRepository.findByEmail("user@test.com")).thenReturn(Optional.of(testUser));
             when(designPlanRepository.findById(999)).thenReturn(Optional.empty());
@@ -110,16 +116,17 @@ class TransactionServiceTest {
         @Test
         @DisplayName("lanza BusinessLogicException si el usuario no está autenticado")
         void shouldThrowWhenUserNotAuthenticated() {
-            SecurityContextHolder.clearContext(); // sin contexto
+            SecurityContextHolder.clearContext();
 
             TransactionRequestDTO dto = new TransactionRequestDTO();
             dto.setPlanId(10);
+            dto.setPaymentMethod("transferencia");
 
             assertThatThrownBy(() -> transactionService.createTransaction(dto))
                     .isInstanceOf(BusinessLogicException.class);
         }
     }
-
+    
     @Nested
     @DisplayName("getMyTransactions()")
     class GetMyTransactions {

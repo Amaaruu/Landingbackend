@@ -171,11 +171,14 @@
                 
                 <configuration>
                     <excludes>
-                        <exclude>**/dto/**</exclude>
-                        <exclude>**/model/**</exclude>
-                        <exclude>**/exception/**</exclude>
-                        <exclude>**/config/**</exclude>
-                        <exclude>**/BackendApplication.class</exclude>
+						<exclude>Landing/Backend/BackendApplication.class</exclude>
+						<exclude>Landing/Backend/dto/**</exclude>
+						<exclude>Landing/Backend/model/**</exclude>
+						<exclude>Landing/Backend/config/**</exclude>
+						<exclude>Landing/Backend/service/EmailService.class</exclude>
+						<exclude>Landing/Backend/service/AiService.class</exclude>
+						<exclude>Landing/Backend/service/ImageUploadService.class</exclude>
+						<exclude>Landing/Backend/service/AiGenerationTask.class</exclude>
                     </excludes>
                 </configuration>
 

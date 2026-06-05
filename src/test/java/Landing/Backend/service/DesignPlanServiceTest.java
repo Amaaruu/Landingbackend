@@ -20,9 +20,11 @@ import static org.mockito.Mockito.*;
 @DisplayName("DesignPlanService — CRUD de planes")
 class DesignPlanServiceTest {
 
-    @Mock private DesignPlanRepository planRepository;
-    @Mock private EmailService emailService;
-    @InjectMocks private DesignPlanService designPlanService;
+    @Mock
+    private DesignPlanRepository planRepository;
+
+    @InjectMocks
+    private DesignPlanService designPlanService;
 
     private DesignPlan basicPlan;
 
@@ -37,11 +39,15 @@ class DesignPlanServiceTest {
     }
 
     @Test
-    @DisplayName("getAllDesignPlans() retorna lista con planes activos")
-    void shouldReturnAllActivePlans() {
+    @DisplayName("getAllDesignPlans() retorna lista de planes")
+    void shouldReturnAllPlans() {
         when(planRepository.findAll()).thenReturn(List.of(basicPlan));
         List<DesignPlan> result = designPlanService.getAllDesignPlans();
-        assertThat(result).hasSize(1).first().extracting(DesignPlan::getName).isEqualTo("Básico");
+
+        assertThat(result).hasSize(1)
+                .first()
+                .extracting(DesignPlan::getName)
+                .isEqualTo("Básico");
     }
 
     @Test
@@ -54,7 +60,7 @@ class DesignPlanServiceTest {
     }
 
     @Test
-    @DisplayName("updatePlan() actualiza solo los campos permitidos")
+    @DisplayName("updatePlan() actualiza nombre, descripción y precio correctamente")
     void shouldUpdatePlanFields() {
         DesignPlan updatedData = new DesignPlan();
         updatedData.setName("Premium");
@@ -67,6 +73,7 @@ class DesignPlanServiceTest {
         DesignPlan result = designPlanService.updatePlan(1, updatedData);
 
         assertThat(result.getName()).isEqualTo("Premium");
+        assertThat(result.getDescription()).isEqualTo("Plan avanzado");
         assertThat(result.getPrice()).isEqualByComparingTo("99.99");
     }
 
@@ -74,17 +81,44 @@ class DesignPlanServiceTest {
     @DisplayName("updatePlan() lanza ResourceNotFoundException para ID inexistente")
     void shouldThrowWhenPlanToUpdateNotFound() {
         when(planRepository.findById(999)).thenReturn(Optional.empty());
+
         DesignPlan data = new DesignPlan();
+        data.setName("Cualquier nombre");
+        data.setDescription("desc");
+        data.setPrice(BigDecimal.ONE);
 
         assertThatThrownBy(() -> designPlanService.updatePlan(999, data))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("999");
+    }
+
+    @Test
+    @DisplayName("deletePlan() llama a repository.delete() con la entidad correcta")
+    void shouldCallDeleteOnRepository() {
+        when(planRepository.findById(1)).thenReturn(Optional.of(basicPlan));
+        designPlanService.deletePlan(1);
+        verify(planRepository).delete(basicPlan);
+    }
+
+    @Test
+    @DisplayName("deletePlan() lanza ResourceNotFoundException si el plan no existe")
+    void shouldThrowWhenDeletingNonExistentPlan() {
+        when(planRepository.findById(999)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> designPlanService.deletePlan(999))
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
-    @DisplayName("deletePlan() llama al método delete del repositorio")
-    void shouldSoftDeletePlan() {
+    @DisplayName("getPlanById() retorna Optional con el plan cuando existe")
+    void shouldReturnPlanById() {
         when(planRepository.findById(1)).thenReturn(Optional.of(basicPlan));
-        designPlanService.deletePlan(1);
-        verify(planRepository).delete(basicPlan);
+
+        Optional<DesignPlan> result = designPlanService.getPlanById(1);
+
+        assertThat(result).isPresent()
+                .get()
+                .extracting(DesignPlan::getName)
+                .isEqualTo("Básico");
     }
 }
