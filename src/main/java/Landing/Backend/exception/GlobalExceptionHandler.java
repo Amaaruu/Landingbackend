@@ -4,6 +4,8 @@ import Landing.Backend.dto.ErrorResponseDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -31,14 +33,24 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponseDTO> handleNotFound(ResourceNotFoundException ex) {
         log.warn("[ResourceNotFoundException] {}", ex.getMessage());
-        // Mensaje genérico: no exponer IDs ni nombres de clases al cliente
         return buildResponse("El recurso solicitado no fue encontrado.", HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<ErrorResponseDTO> handleBadCredentials(BadCredentialsException ex) {
+        log.warn("[BadCredentialsException] Intento de login fallido: {}", ex.getMessage());
+        return buildResponse("Email o contraseña incorrectos.", HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponseDTO> handleAccessDenied(AccessDeniedException ex) {
+        log.warn("[AccessDeniedException] Acceso denegado: {}", ex.getMessage());
+        return buildResponse("No tienes permisos para realizar esta acción.", HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDTO> handleGlobalException(Exception ex) {
         String errorId = UUID.randomUUID().toString();
-        // Stack trace completo queda en los logs internos de Render, nunca en la respuesta HTTP
         log.error("[Error ID: {}] Excepción no controlada: {}", errorId, ex.getMessage(), ex);
         return buildResponse(
             "Ha ocurrido un error inesperado. Código de referencia: " + errorId,
