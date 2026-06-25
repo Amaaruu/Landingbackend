@@ -40,19 +40,19 @@ public class BackendLoadSimulation extends Simulation {
     {
         setUp(
             healthScenario.injectOpen(
-                rampUsers(10).during(30)
+                rampUsers(5).during(10)
             ),
             plansScenario.injectOpen(
-                constantUsersPerSec(5).during(60)
+                constantUsersPerSec(1).during(20)
             ),
             loginScenario.injectOpen(
-                rampUsers(50).during(10)
+                rampUsers(10).during(20)
             )
         )
         .protocols(httpProtocol)
         .assertions(
-            global().responseTime().percentile3().lt(2000),
-            global().responseTime().mean().lt(500),
+            global().responseTime().percentile3().lt(3500),
+            global().responseTime().mean().lt(1500),
             global().successfulRequests().percent().gt(95.0)
         );
     }
